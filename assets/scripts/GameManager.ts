@@ -54,6 +54,9 @@ export class GameManager extends Component {
     public coinFrame: SpriteFrame | null = null;
 
     @property([SpriteFrame])
+    public coinFrames: SpriteFrame[] = [];
+
+    @property([SpriteFrame])
     public birdFrames: SpriteFrame[] = [];
 
     private readonly bestScoreKey = 'flappy_best_score';
@@ -83,6 +86,7 @@ export class GameManager extends Component {
     private pipeTimer = 0;
     private birdAnimTimer = 0;
     private birdFrameIndex = 0;
+    private coinAnimTimer = 0;
     private invincibleTimer = 0;
     private hitSoundTimer = 0;
     private screenWidth = 0;
@@ -99,6 +103,7 @@ export class GameManager extends Component {
     private pipeWidth = 104;
     private pipeHeight = 640;
     private coinSize = 43.2;
+    private coinGapRatio = 0.2;
     private coinFrameWidth = 162;
     private coinFrameHeight = 161;
 
@@ -114,7 +119,7 @@ export class GameManager extends Component {
     private hpIconScale = 0.32;
     private hitSoundCooldown = 0.08;
     private hitSoundVolume = 0.85;
-    private coinRotateSpeed = 240;
+    private coinAnimDuration = 0.5;
 
     protected onLoad(): void {
         this.refreshScreenSize();
@@ -286,6 +291,7 @@ export class GameManager extends Component {
         this.lives = this.maxLives;
         this.birdVelocity = 0;
         this.pipeTimer = 0;
+        this.coinAnimTimer = 0;
         this.invincibleTimer = 0;
 
         if (this.bird) {
@@ -426,6 +432,8 @@ export class GameManager extends Component {
             this.spawnPipe();
         }
 
+        this.updateCoinAnimation(deltaTime);
+
         for (let i = this.pipes.length - 1; i >= 0; i--) {
             const pair = this.pipes[i];
             pair.root.setPosition(pair.root.position.x - this.pipeSpeed * deltaTime, 0, 0);
@@ -448,12 +456,6 @@ export class GameManager extends Component {
                 }
             }
 
-            for (const coin of pair.coins) {
-                if (coin.active) {
-                    coin.angle = (coin.angle + this.coinRotateSpeed * deltaTime) % 360;
-                }
-            }
-
             if (!pair.topGone && !pair.bottomGone && !pair.scored && this.bird && pair.root.position.x + this.pipeWidth / 2 < this.bird.position.x) {
                 pair.scored = true;
                 this.score += 1;
@@ -467,6 +469,32 @@ export class GameManager extends Component {
         }
     }
 
+    private updateCoinAnimation(deltaTime: number): void {
+        if (this.coinFrames.length === 0 || this.coinAnimDuration <= 0) {
+            return;
+        }
+
+        this.coinAnimTimer = (this.coinAnimTimer + deltaTime) % this.coinAnimDuration;
+        const frameIndex = Math.floor((this.coinAnimTimer / this.coinAnimDuration) * this.coinFrames.length) % this.coinFrames.length;
+        const frame = this.coinFrames[frameIndex];
+        if (!frame) {
+            return;
+        }
+
+        for (const pair of this.pipes) {
+            for (const coin of pair.coins) {
+                if (!coin.active) {
+                    continue;
+                }
+
+                const sprite = coin.getComponent(Sprite);
+                if (sprite) {
+                    sprite.spriteFrame = frame;
+                }
+            }
+        }
+    }
+
     private spawnPipe(): void {
         if (!this.pipeLayer) {
             return;
@@ -475,7 +503,8 @@ export class GameManager extends Component {
         this.pipeWidth = 52 * this.pipeScale;
         this.pipeHeight = 320 * this.pipeScale;
 
-        const gapHeight = this.birdHeight * (1.5 + Math.random() * 1.5);
+        const gapRangeByBird = this.getCurrentGapRange();
+        const gapHeight = this.birdHeight * (gapRangeByBird.min + Math.random() * (gapRangeByBird.max - gapRangeByBird.min));
         const minGapCenter = this.floorY + gapHeight / 2 + 80;
         const maxGapCenter = this.screenHeight / 2 - gapHeight / 2 - 140;
         const gapRange = Math.max(0, maxGapCenter - minGapCenter);
@@ -508,21 +537,32 @@ export class GameManager extends Component {
         });
     }
 
+    private getCurrentGapRange(): { min: number; max: number } {
+        const difficultyStep = Math.min(3, Math.floor(this.score / 10));
+        return {
+            min: 1.8 - difficultyStep * 0.1,
+            max: 3 - difficultyStep * 0.2,
+        };
+    }
+
     private createCoins(parent: Node, gapCenterY: number, gapHeight: number): Node[] {
-        if (!this.coinFrame || this.coinSize <= 0) {
+        const initialFrame = this.coinFrames[0] || this.coinFrame;
+        if (!initialFrame || this.coinSize <= 0) {
             return [];
         }
 
-        const coinCount = Math.max(0, Math.floor(gapHeight / this.coinSize));
-        const totalHeight = coinCount * this.coinSize;
+        const coinSpacing = this.coinSize * this.coinGapRatio;
+        const coinStep = this.coinSize + coinSpacing;
+        const coinCount = Math.max(0, Math.floor((gapHeight + coinSpacing) / coinStep));
+        const totalHeight = coinCount * this.coinSize + Math.max(0, coinCount - 1) * coinSpacing;
         const firstY = gapCenterY + totalHeight / 2 - this.coinSize / 2;
         const coinScale = this.coinSize / this.coinFrameHeight;
         const coins: Node[] = [];
 
         for (let i = 0; i < coinCount; i++) {
-            const coin = this.createSpriteNode(`Coin_${i}`, this.coinFrame, parent, this.coinFrameWidth, this.coinFrameHeight);
+            const coin = this.createSpriteNode(`Coin_${i}`, initialFrame, parent, this.coinFrameWidth, this.coinFrameHeight);
             coin.setScale(coinScale, coinScale, 1);
-            coin.setPosition(0, firstY - i * this.coinSize, 0);
+            coin.setPosition(0, firstY - i * coinStep, 0);
             coins.push(coin);
         }
 
