@@ -60,6 +60,7 @@ export class GameManager extends Component {
     public birdFrames: SpriteFrame[] = [];
 
     private readonly bestScoreKey = 'flappy_best_score';
+    private readonly coinScoreKey = 'flappy_coin_score';
 
     private state: GameState = 'ready';
     private world: Node | null = null;
@@ -126,6 +127,7 @@ export class GameManager extends Component {
         this.audioSource = getOrAddComponent(this.node, AudioSource);
         this.loadHitSound();
         this.bestScore = Number.parseInt(sys.localStorage.getItem(this.bestScoreKey) || '0', 10) || 0;
+        this.coinScore = Number.parseInt(sys.localStorage.getItem(this.coinScoreKey) || '0', 10) || 0;
         this.createScene();
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.on(Input.EventType.MOUSE_DOWN, this.onTouchStart, this);
@@ -177,6 +179,7 @@ export class GameManager extends Component {
         this.createBird();
         this.createHud();
         this.resetGame();
+        this.startGame();
     }
 
     private createBackground(): void {
@@ -218,10 +221,10 @@ export class GameManager extends Component {
         this.scoreLabel = this.createLabel('ScoreLabel', '0', 72, new Vec3(0, 0, 0), this.hudLayer);
         this.bestLabel = this.createLabel('BestLabel', `Best ${this.bestScore}`, 34, new Vec3(0, 0, 0), this.hudLayer);
         this.coinScoreLabel = this.createLabel('CoinScoreLabel', 'Coin 0', 34, new Vec3(0, 0, 0), this.hudLayer);
-        this.tipLabel = this.createLabel('TipLabel', '点击开始', 42, new Vec3(0, 0, 0), this.hudLayer);
+        this.tipLabel = this.createLabel('TipLabel', '', 42, new Vec3(0, 0, 0), this.hudLayer);
         this.createHpHud();
         if (this.tipLabel) {
-            this.tipLabel.string = '点击开始';
+            this.tipLabel.node.active = false;
         }
         this.layoutHud();
     }
@@ -287,7 +290,6 @@ export class GameManager extends Component {
     private resetGame(): void {
         this.state = 'ready';
         this.score = 0;
-        this.coinScore = 0;
         this.lives = this.maxLives;
         this.birdVelocity = 0;
         this.pipeTimer = 0;
@@ -308,8 +310,7 @@ export class GameManager extends Component {
         this.updateScoreLabels();
         this.updateHpHud();
         if (this.tipLabel) {
-            this.tipLabel.string = '点击开始';
-            this.tipLabel.node.active = true;
+            this.tipLabel.node.active = false;
         }
     }
 
@@ -332,6 +333,7 @@ export class GameManager extends Component {
 
         if (this.state === 'gameOver') {
             this.resetGame();
+            this.startGame();
             return;
         }
 
@@ -643,6 +645,7 @@ export class GameManager extends Component {
         }
 
         this.coinScore += collected;
+        sys.localStorage.setItem(this.coinScoreKey, String(this.coinScore));
         this.updateScoreLabels();
     }
 
