@@ -59,8 +59,19 @@ export class GameManager extends Component {
     @property([SpriteFrame])
     public birdFrames: SpriteFrame[] = [];
 
+    @property([SpriteFrame])
+    public redBirdFrames: SpriteFrame[] = [];
+
+    @property([SpriteFrame])
+    public blueBirdFrames: SpriteFrame[] = [];
+
+    @property([SpriteFrame])
+    public purpleBirdFrames: SpriteFrame[] = [];
+
     private readonly bestScoreKey = 'flappy_best_score';
     private readonly coinScoreKey = 'flappy_coin_score';
+    private readonly ownedBirdsKey = 'flappy_owned_birds';
+    private readonly selectedBirdKey = 'flappy_selected_bird';
 
     private state: GameState = 'ready';
     private world: Node | null = null;
@@ -78,6 +89,7 @@ export class GameManager extends Component {
     private lands: Node[] = [];
     private hpNodes: Node[] = [];
     private pipes: PipePair[] = [];
+    private activeBirdFrames: SpriteFrame[] = [];
 
     private score = 0;
     private coinScore = 0;
@@ -202,7 +214,8 @@ export class GameManager extends Component {
     }
 
     private createBird(): void {
-        this.bird = this.createSpriteNode('Bird', this.birdFrames[0] || null, this.world, 48, 48);
+        this.activeBirdFrames = this.getSelectedBirdFrames();
+        this.bird = this.createSpriteNode('Bird', this.activeBirdFrames[0] || this.birdFrames[0] || null, this.world, 48, 48);
         this.bird.setScale(this.birdScale, this.birdScale, 1);
         this.birdHeight = 48 * this.birdScale;
         this.gapHeight = this.birdHeight * 3;
@@ -353,7 +366,8 @@ export class GameManager extends Component {
     }
 
     private updateBirdAnimation(deltaTime: number): void {
-        if (!this.bird || this.birdFrames.length === 0) {
+        const frames = this.activeBirdFrames.length > 0 ? this.activeBirdFrames : this.birdFrames;
+        if (!this.bird || frames.length === 0) {
             return;
         }
 
@@ -363,11 +377,49 @@ export class GameManager extends Component {
         }
 
         this.birdAnimTimer = 0;
-        this.birdFrameIndex = (this.birdFrameIndex + 1) % this.birdFrames.length;
+        this.birdFrameIndex = (this.birdFrameIndex + 1) % frames.length;
         const sprite = this.bird.getComponent(Sprite);
         if (sprite) {
-            sprite.spriteFrame = this.birdFrames[this.birdFrameIndex];
+            sprite.spriteFrame = frames[this.birdFrameIndex];
         }
+    }
+
+    private getSelectedBirdFrames(): SpriteFrame[] {
+        const selectedBird = sys.localStorage.getItem(this.selectedBirdKey) || 'default';
+        const ownedBirds = this.getOwnedBirdIds();
+        if (ownedBirds.indexOf(selectedBird) < 0) {
+            return this.birdFrames;
+        }
+
+        if (selectedBird === 'red' && this.redBirdFrames.length > 0) {
+            return this.redBirdFrames;
+        }
+        if (selectedBird === 'blue' && this.blueBirdFrames.length > 0) {
+            return this.blueBirdFrames;
+        }
+        if (selectedBird === 'purple' && this.purpleBirdFrames.length > 0) {
+            return this.purpleBirdFrames;
+        }
+
+        return this.birdFrames;
+    }
+
+    private getOwnedBirdIds(): string[] {
+        const rawOwnedBirds = sys.localStorage.getItem(this.ownedBirdsKey);
+        if (!rawOwnedBirds) {
+            return ['default'];
+        }
+
+        try {
+            const parsed = JSON.parse(rawOwnedBirds);
+            if (Array.isArray(parsed) && parsed.every((item) => typeof item === 'string')) {
+                return parsed.indexOf('default') >= 0 ? parsed : ['default', ...parsed];
+            }
+        } catch {
+            return ['default'];
+        }
+
+        return ['default'];
     }
 
     private updateInvincibility(deltaTime: number): void {
