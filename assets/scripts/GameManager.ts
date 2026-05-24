@@ -101,6 +101,8 @@ export class GameManager extends Component {
     private reviveButton: Node | null = null;
     private audioSource: AudioSource | null = null;
     private hitClip: AudioClip | null = null;
+    private jumpClip: AudioClip | null = null;
+    private coinClip: AudioClip | null = null;
     private lands: Node[] = [];
     private hpNodes: Node[] = [];
     private pipes: PipePair[] = [];
@@ -149,13 +151,15 @@ export class GameManager extends Component {
     private hpIconScale = 0.32;
     private hitSoundCooldown = 0.08;
     private hitSoundVolume = 0.85;
+    private jumpSoundVolume = 0.55;
+    private coinSoundVolume = 0.65;
     private coinAnimDuration = 0.5;
 
     protected onLoad(): void {
         this.refreshScreenSize();
         AudioManager.ensure();
         this.audioSource = getOrAddComponent(this.node, AudioSource);
-        this.loadHitSound();
+        this.loadEffectSounds();
         this.bestScore = Number.parseInt(sys.localStorage.getItem(this.bestScoreKey) || '0', 10) || 0;
         this.coinScore = Number.parseInt(sys.localStorage.getItem(this.coinScoreKey) || '0', 10) || 0;
         this.createScene();
@@ -388,6 +392,7 @@ export class GameManager extends Component {
     private onTouchStart(): void {
         if (this.state === 'ready') {
             this.startGame();
+            this.playJumpSound();
             return;
         }
 
@@ -396,6 +401,7 @@ export class GameManager extends Component {
         }
 
         this.birdVelocity = this.jumpVelocity;
+        this.playJumpSound();
     }
 
     private bindGameOverButton(button: Node, onClick: () => void): void {
@@ -574,14 +580,26 @@ export class GameManager extends Component {
         }
     }
 
-    private loadHitSound(): void {
-        resources.load('audio/hit', AudioClip, (error, clip) => {
+    private loadEffectSounds(): void {
+        this.loadAudioClip('audio/hit', (clip) => {
+            this.hitClip = clip;
+        });
+        this.loadAudioClip('audio/jump', (clip) => {
+            this.jumpClip = clip;
+        });
+        this.loadAudioClip('audio/coin', (clip) => {
+            this.coinClip = clip;
+        });
+    }
+
+    private loadAudioClip(path: string, onLoaded: (clip: AudioClip) => void): void {
+        resources.load(path, AudioClip, (error, clip) => {
             if (error) {
-                console.warn('Failed to load hit sound:', error);
+                console.warn(`Failed to load audio clip: ${path}`, error);
                 return;
             }
 
-            this.hitClip = clip;
+            onLoaded(clip);
         });
     }
 
@@ -592,6 +610,22 @@ export class GameManager extends Component {
 
         this.hitSoundTimer = this.hitSoundCooldown;
         this.audioSource.playOneShot(this.hitClip, this.hitSoundVolume);
+    }
+
+    private playJumpSound(): void {
+        this.playEffectSound(this.jumpClip, this.jumpSoundVolume);
+    }
+
+    private playCoinSound(): void {
+        this.playEffectSound(this.coinClip, this.coinSoundVolume);
+    }
+
+    private playEffectSound(clip: AudioClip | null, volume: number): void {
+        if (!AudioSettings.isSoundEnabled() || !this.audioSource || !clip) {
+            return;
+        }
+
+        this.audioSource.playOneShot(clip, volume);
     }
 
     private updateLand(deltaTime: number): void {
@@ -822,6 +856,7 @@ export class GameManager extends Component {
 
         this.coinScore += collected;
         sys.localStorage.setItem(this.coinScoreKey, String(this.coinScore));
+        this.playCoinSound();
         this.updateScoreLabels();
     }
 
