@@ -1994,7 +1994,19 @@
         "__uuid__": "c569a9fb-a83c-415c-90d9-48a2d540a55a@f9941",
         "__expectedType__": "cc.SpriteFrame"
       }
-    ]
+    ],
+    "gameOverPanelFrame": {
+      "__uuid__": "bc63f55f-4d88-4ed3-9014-504c48542462@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "buttonNormalFrame": {
+      "__uuid__": "72b2f4d1-6192-45d9-9ab6-1b231bf9a9d0@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "buttonPressedFrame": {
+      "__uuid__": "22c174ef-34c8-4004-95b2-4ecc275b31ee@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    }
   },
   {
     "__type__": "cc.SceneGlobals",

@@ -4,6 +4,7 @@ import {
     AudioSource,
     Color,
     Component,
+    director,
     input,
     Input,
     Label,
@@ -54,6 +55,15 @@ export class GameManager extends Component {
     @property(SpriteFrame)
     public coinFrame: SpriteFrame | null = null;
 
+    @property(SpriteFrame)
+    public gameOverPanelFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
+    public buttonNormalFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
+    public buttonPressedFrame: SpriteFrame | null = null;
+
     @property([SpriteFrame])
     public coinFrames: SpriteFrame[] = [];
 
@@ -85,6 +95,10 @@ export class GameManager extends Component {
     private coinScoreLabel: Label | null = null;
     private tipLabel: Label | null = null;
     private hpTextLabel: Label | null = null;
+    private gameOverPanel: Node | null = null;
+    private restartButton: Node | null = null;
+    private menuButton: Node | null = null;
+    private reviveButton: Node | null = null;
     private audioSource: AudioSource | null = null;
     private hitClip: AudioClip | null = null;
     private lands: Node[] = [];
@@ -105,6 +119,8 @@ export class GameManager extends Component {
     private hitSoundTimer = 0;
     private screenWidth = 0;
     private screenHeight = 0;
+    private reviveAvailable = true;
+    private pressedGameOverButton: Node | null = null;
 
     private birdScale = 1.8;
     private landScale = 2;
@@ -238,10 +254,37 @@ export class GameManager extends Component {
         this.coinScoreLabel = this.createLabel('CoinScoreLabel', 'Coin 0', 34, new Vec3(0, 0, 0), this.hudLayer);
         this.tipLabel = this.createLabel('TipLabel', '', 42, new Vec3(0, 0, 0), this.hudLayer);
         this.createHpHud();
+        this.createGameOverPanel();
         if (this.tipLabel) {
             this.tipLabel.node.active = false;
         }
         this.layoutHud();
+    }
+
+    private createGameOverPanel(): void {
+        const parent = this.hudLayer || this.world || this.node;
+        this.gameOverPanel = this.createSpriteNode('GameOverPanel', this.gameOverPanelFrame, parent, 480, 380);
+        this.gameOverPanel.active = false;
+        this.gameOverPanel.layer = parent.layer;
+
+        const title = this.createLabel('GameOverTitle', '游戏结束', 42, new Vec3(0, 0, 0), this.gameOverPanel);
+        title.color = Color.WHITE;
+
+        this.restartButton = this.createGameOverButton('RestartButton', '重新开始', () => this.restartGame());
+        this.menuButton = this.createGameOverButton('MenuButton', '回到主菜单', () => this.backToMainMenu());
+        this.reviveButton = this.createGameOverButton('ReviveButton', '立即复活', () => this.reviveGame());
+    }
+
+    private createGameOverButton(name: string, text: string, onClick: () => void): Node {
+        const parent = this.gameOverPanel || this.hudLayer || this.world || this.node;
+        const button = this.createSpriteNode(name, this.buttonNormalFrame, parent, 260, 72);
+        button.layer = parent.layer;
+
+        const label = this.createLabel(`${name}Label`, text, 30, new Vec3(0, 2, 0), button);
+        label.color = new Color(90, 46, 0, 255);
+
+        this.bindGameOverButton(button, onClick);
+        return button;
     }
 
     private createHpHud(): void {
@@ -310,6 +353,7 @@ export class GameManager extends Component {
         this.pipeTimer = 0;
         this.coinAnimTimer = 0;
         this.invincibleTimer = 0;
+        this.reviveAvailable = true;
 
         if (this.bird) {
             this.bird.setPosition(-180, 120, 0);
@@ -327,6 +371,7 @@ export class GameManager extends Component {
         if (this.tipLabel) {
             this.tipLabel.node.active = false;
         }
+        this.hideGameOverPanel();
     }
 
     private startGame(): void {
@@ -347,12 +392,89 @@ export class GameManager extends Component {
         }
 
         if (this.state === 'gameOver') {
-            this.resetGame();
-            this.startGame();
             return;
         }
 
         this.birdVelocity = this.jumpVelocity;
+    }
+
+    private bindGameOverButton(button: Node, onClick: () => void): void {
+        button.on(Node.EventType.TOUCH_START, () => {
+            this.pressedGameOverButton = button;
+            this.setSpriteFrame(button, this.buttonPressedFrame || this.buttonNormalFrame);
+        }, this);
+        button.on(Node.EventType.TOUCH_CANCEL, () => {
+            if (this.pressedGameOverButton === button) {
+                this.pressedGameOverButton = null;
+            }
+            this.setSpriteFrame(button, this.buttonNormalFrame);
+        }, this);
+        button.on(Node.EventType.TOUCH_END, () => {
+            const shouldClick = this.pressedGameOverButton === button;
+            this.pressedGameOverButton = null;
+            this.setSpriteFrame(button, this.buttonNormalFrame);
+            if (shouldClick) {
+                onClick();
+            }
+        }, this);
+    }
+
+    private restartGame(): void {
+        this.resetGame();
+        this.startGame();
+    }
+
+    private backToMainMenu(): void {
+        director.loadScene('Start');
+    }
+
+    private reviveGame(): void {
+        if (!this.reviveAvailable || this.state !== 'gameOver') {
+            return;
+        }
+
+        this.reviveAvailable = false;
+        this.state = 'playing';
+        this.lives = this.maxLives;
+        this.invincibleTimer = this.invincibleDuration;
+        this.birdVelocity = this.jumpVelocity;
+        if (this.bird) {
+            const safeY = Math.max(this.bird.position.y, this.floorY + this.birdHeight * 1.25);
+            this.bird.setPosition(this.bird.position.x, safeY, 0);
+            this.bird.angle = 0;
+        }
+        this.setBirdAlpha(90);
+        this.updateHpHud();
+        this.hideGameOverPanel();
+        if (this.tipLabel) {
+            this.tipLabel.node.active = false;
+        }
+    }
+
+    private showGameOverPanel(): void {
+        if (!this.gameOverPanel) {
+            return;
+        }
+
+        this.gameOverPanel.active = true;
+        if (this.reviveButton) {
+            this.reviveButton.active = this.reviveAvailable;
+        }
+        if (this.tipLabel) {
+            this.tipLabel.node.active = false;
+        }
+        const parent = this.gameOverPanel.parent;
+        if (parent) {
+            this.gameOverPanel.setSiblingIndex(parent.children.length - 1);
+        }
+        this.layoutHud();
+    }
+
+    private hideGameOverPanel(): void {
+        if (this.gameOverPanel) {
+            this.gameOverPanel.active = false;
+        }
+        this.pressedGameOverButton = null;
     }
 
     private updateBirdPhysics(deltaTime: number): void {
@@ -727,10 +849,7 @@ export class GameManager extends Component {
         this.bestScore = Math.max(this.bestScore, this.score);
         sys.localStorage.setItem(this.bestScoreKey, String(this.bestScore));
         this.updateScoreLabels();
-        if (this.tipLabel) {
-            this.tipLabel.string = 'Game Over\n点击重新开始';
-            this.tipLabel.node.active = true;
-        }
+        this.showGameOverPanel();
     }
 
     private updateScoreLabels(): void {
@@ -820,6 +939,7 @@ export class GameManager extends Component {
         if (this.tipLabel) {
             this.tipLabel.node.setPosition(0, Math.min(120, halfHeight - 220), 0);
         }
+        this.layoutGameOverPanel();
 
         const hpStartX = -halfWidth + 58;
         for (let i = 0; i < this.hpNodes.length; i++) {
@@ -827,6 +947,47 @@ export class GameManager extends Component {
         }
         if (this.hpTextLabel) {
             this.hpTextLabel.node.setPosition(-halfWidth + 112, topY - 62, 0);
+        }
+    }
+
+    private layoutGameOverPanel(): void {
+        if (!this.gameOverPanel) {
+            return;
+        }
+
+        const panelWidth = Math.min(500, Math.max(360, this.screenWidth * 0.78));
+        const panelHeight = panelWidth * 0.79;
+        getOrAddComponent(this.gameOverPanel, UITransform).setContentSize(panelWidth, panelHeight);
+        this.gameOverPanel.setPosition(0, Math.min(60, this.screenHeight * 0.04), 0);
+
+        const title = this.gameOverPanel.getChildByName('GameOverTitle');
+        if (title) {
+            getOrAddComponent(title, UITransform).setContentSize(panelWidth * 0.9, 62);
+            title.setPosition(0, panelHeight * 0.31, 0);
+        }
+
+        const buttons = [this.restartButton, this.menuButton, this.reviveButton].filter((button): button is Node => !!button && button.active);
+        const buttonWidth = panelWidth * 0.56;
+        const buttonHeight = 66;
+        const spacing = buttonHeight + 16;
+        const firstY = buttons.length === 3 ? panelHeight * 0.12 : panelHeight * 0.02;
+        for (let i = 0; i < buttons.length; i++) {
+            const button = buttons[i];
+            getOrAddComponent(button, UITransform).setContentSize(buttonWidth, buttonHeight);
+            button.setPosition(0, firstY - i * spacing, 0);
+
+            const label = button.getChildByName(`${button.name}Label`);
+            if (label) {
+                getOrAddComponent(label, UITransform).setContentSize(buttonWidth, buttonHeight);
+                label.setPosition(0, 2, 0);
+            }
+        }
+
+        if (this.gameOverPanel.active) {
+            const parent = this.gameOverPanel.parent;
+            if (parent) {
+                this.gameOverPanel.setSiblingIndex(parent.children.length - 1);
+            }
         }
     }
 
@@ -839,6 +1000,17 @@ export class GameManager extends Component {
         const parent = this.hpLayer.parent;
         if (parent) {
             this.hpLayer.setSiblingIndex(parent.children.length - 1);
+        }
+    }
+
+    private setSpriteFrame(node: Node | null, frame: SpriteFrame | null): void {
+        if (!node || !frame) {
+            return;
+        }
+
+        const sprite = node.getComponent(Sprite);
+        if (sprite) {
+            sprite.spriteFrame = frame;
         }
     }
 
