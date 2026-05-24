@@ -23,12 +23,7 @@
         "minfilter": "linear",
         "magfilter": "linear",
         "mipfilter": "none",
-        "anisotropy": 0,
-        "trimType": "auto",
-        "width": 48,
-        "height": 48,
-        "rawWidth": 48,
-        "rawHeight": 48
+        "anisotropy": 0
       },
       "ver": "1.0.22",
       "imported": true,
@@ -44,15 +39,15 @@
       "id": "f9941",
       "name": "spriteFrame",
       "userData": {
-        "trimType": "auto",
+        "trimType": "none",
         "trimThreshold": 1,
         "rotated": false,
         "offsetX": 0,
         "offsetY": 0,
-        "trimX": 2,
-        "trimY": 7,
-        "width": 44,
-        "height": 34,
+        "trimX": 0,
+        "trimY": 0,
+        "width": 48,
+        "height": 48,
         "rawWidth": 48,
         "rawHeight": 48,
         "borderTop": 0,
@@ -66,17 +61,17 @@
         "meshType": 0,
         "vertices": {
           "rawPosition": [
-            -22,
-            -17,
+            -24,
+            -24,
             0,
-            22,
-            -17,
+            24,
+            -24,
             0,
-            -22,
-            17,
+            -24,
+            24,
             0,
-            22,
-            17,
+            24,
+            24,
             0
           ],
           "indexes": [
@@ -88,33 +83,33 @@
             3
           ],
           "uv": [
-            2,
-            41,
-            46,
-            41,
-            2,
-            7,
-            46,
-            7
+            0,
+            48,
+            48,
+            48,
+            0,
+            0,
+            48,
+            0
           ],
           "nuv": [
-            0.041666666666666664,
-            0.14583333333333334,
-            0.9583333333333334,
-            0.14583333333333334,
-            0.041666666666666664,
-            0.8541666666666666,
-            0.9583333333333334,
-            0.8541666666666666
+            0,
+            0,
+            1,
+            0,
+            0,
+            1,
+            1,
+            1
           ],
           "minPos": [
-            -22,
-            -17,
+            -24,
+            -24,
             0
           ],
           "maxPos": [
-            22,
-            17,
+            24,
+            24,
             0
           ]
         },

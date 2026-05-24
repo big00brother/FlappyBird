@@ -16,11 +16,11 @@ type BirdSkinId = 'default' | 'red' | 'blue' | 'purple';
 
 interface BirdSkinConfig {
     id: BirdSkinId;
-    name: string;
     frames: SpriteFrame[];
     preview: Node | null;
-    actionButton: Node | null;
-    actionLabel: Label | null;
+    priceLabel: Label | null;
+    selectedMark: Node | null;
+    price: number;
 }
 
 @ccclass('StartMenu')
@@ -62,6 +62,9 @@ export class StartMenu extends Component {
     public closeShopLabel: Label | null = null;
 
     @property(Node)
+    public defaultBirdPreview: Node | null = null;
+
+    @property(Node)
     public redBirdPreview: Node | null = null;
 
     @property(Node)
@@ -87,6 +90,30 @@ export class StartMenu extends Component {
 
     @property(Label)
     public purpleActionLabel: Label | null = null;
+
+    @property(Label)
+    public defaultPriceLabel: Label | null = null;
+
+    @property(Label)
+    public redPriceLabel: Label | null = null;
+
+    @property(Label)
+    public bluePriceLabel: Label | null = null;
+
+    @property(Label)
+    public purplePriceLabel: Label | null = null;
+
+    @property(Node)
+    public defaultSelectedMark: Node | null = null;
+
+    @property(Node)
+    public redSelectedMark: Node | null = null;
+
+    @property(Node)
+    public blueSelectedMark: Node | null = null;
+
+    @property(Node)
+    public purpleSelectedMark: Node | null = null;
 
     @property(SpriteFrame)
     public buttonNormalFrame: SpriteFrame | null = null;
@@ -121,6 +148,7 @@ export class StartMenu extends Component {
     private selectedBird: BirdSkinId = 'default';
     private ownedBirds = new Set<BirdSkinId>(['default']);
     private pressedButton: Node | null = null;
+    private pressedSkinPreview: Node | null = null;
     private isLoadingGame = false;
 
     private readonly birdFrameInterval = 0.12;
@@ -155,6 +183,7 @@ export class StartMenu extends Component {
         this.closeShopButton = this.closeShopButton || this.getNodeByPath('ShopPanel/CloseShopButton');
         this.closeShopLabel = this.closeShopLabel || this.getLabelByPath('ShopPanel/CloseShopButton/CloseShopLabel');
 
+        this.defaultBirdPreview = this.defaultBirdPreview || this.getNodeByPath('ShopPanel/DefaultBirdPreview');
         this.redBirdPreview = this.redBirdPreview || this.getNodeByPath('ShopPanel/RedBirdPreview');
         this.blueBirdPreview = this.blueBirdPreview || this.getNodeByPath('ShopPanel/BlueBirdPreview');
         this.purpleBirdPreview = this.purpleBirdPreview || this.getNodeByPath('ShopPanel/PurpleBirdPreview');
@@ -164,20 +193,28 @@ export class StartMenu extends Component {
         this.redActionLabel = this.redActionLabel || this.getLabelByPath('ShopPanel/RedActionButton/RedActionLabel');
         this.blueActionLabel = this.blueActionLabel || this.getLabelByPath('ShopPanel/BlueActionButton/BlueActionLabel');
         this.purpleActionLabel = this.purpleActionLabel || this.getLabelByPath('ShopPanel/PurpleActionButton/PurpleActionLabel');
+
+        this.defaultPriceLabel = this.defaultPriceLabel || this.getLabelByPath('ShopPanel/DefaultPriceLabel');
+        this.redPriceLabel = this.redPriceLabel || this.getLabelByPath('ShopPanel/RedBirdNameLabel');
+        this.bluePriceLabel = this.bluePriceLabel || this.getLabelByPath('ShopPanel/BlueBirdNameLabel');
+        this.purplePriceLabel = this.purplePriceLabel || this.getLabelByPath('ShopPanel/PurpleBirdNameLabel');
+
+        this.defaultSelectedMark = this.defaultSelectedMark || this.getNodeByPath('ShopPanel/DefaultSelectedMark');
+        this.redSelectedMark = this.redSelectedMark || this.getNodeByPath('ShopPanel/RedSelectedMark');
+        this.blueSelectedMark = this.blueSelectedMark || this.getNodeByPath('ShopPanel/BlueSelectedMark');
+        this.purpleSelectedMark = this.purpleSelectedMark || this.getNodeByPath('ShopPanel/PurpleSelectedMark');
     }
 
     private configureSceneNodes(): void {
         if (this.bird) {
             this.birdBaseY = this.bird.position.y;
-            this.setSpriteFrame(this.bird, this.getSelectedBirdFrames()[0] || this.birdFrames[0] || null);
+            this.refreshStartBirdFrame();
         }
 
         this.configureButton(this.button, this.buttonLabel, '跃动小鸟');
         this.configureButton(this.shopButton, this.shopButtonLabel, '小鸟商店');
         this.configureButton(this.closeShopButton, this.closeShopLabel, '返回');
-        this.configureButton(this.redActionButton, this.redActionLabel, '');
-        this.configureButton(this.blueActionButton, this.blueActionLabel, '');
-        this.configureButton(this.purpleActionButton, this.purpleActionLabel, '');
+        this.hideLegacyPurchaseButtons();
 
         for (const skin of this.getShopSkins()) {
             if (skin.preview) {
@@ -212,9 +249,10 @@ export class StartMenu extends Component {
         this.bindButton(this.button, () => this.enterGame());
         this.bindButton(this.shopButton, () => this.openShop());
         this.bindButton(this.closeShopButton, () => this.closeShop());
-        this.bindButton(this.redActionButton, () => this.handleSkinAction('red'));
-        this.bindButton(this.blueActionButton, () => this.handleSkinAction('blue'));
-        this.bindButton(this.purpleActionButton, () => this.handleSkinAction('purple'));
+        this.bindSkinPreview(this.defaultBirdPreview, 'default');
+        this.bindSkinPreview(this.redBirdPreview, 'red');
+        this.bindSkinPreview(this.blueBirdPreview, 'blue');
+        this.bindSkinPreview(this.purpleBirdPreview, 'purple');
     }
 
     private bindButton(button: Node | null, onClick: () => void): void {
@@ -240,6 +278,40 @@ export class StartMenu extends Component {
                 onClick();
             }
         }, this);
+    }
+
+    private bindSkinPreview(preview: Node | null, id: BirdSkinId): void {
+        if (!preview) {
+            return;
+        }
+
+        preview.on(Node.EventType.TOUCH_START, () => {
+            this.pressedSkinPreview = preview;
+        }, this);
+        preview.on(Node.EventType.TOUCH_CANCEL, () => {
+            if (this.pressedSkinPreview === preview) {
+                this.pressedSkinPreview = null;
+            }
+        }, this);
+        preview.on(Node.EventType.TOUCH_END, () => {
+            const shouldClick = this.pressedSkinPreview === preview;
+            this.pressedSkinPreview = null;
+            if (shouldClick) {
+                this.handleSkinAction(id);
+            }
+        }, this);
+    }
+
+    private hideLegacyPurchaseButtons(): void {
+        if (this.redActionButton) {
+            this.redActionButton.active = false;
+        }
+        if (this.blueActionButton) {
+            this.blueActionButton.active = false;
+        }
+        if (this.purpleActionButton) {
+            this.purpleActionButton.active = false;
+        }
     }
 
     private enterGame(): void {
@@ -281,6 +353,7 @@ export class StartMenu extends Component {
         }
         if (this.bird) {
             this.bird.active = true;
+            this.refreshStartBirdFrame();
         }
     }
 
@@ -291,12 +364,14 @@ export class StartMenu extends Component {
             return;
         }
 
-        if (this.coinBalance < this.birdPrice) {
+        const skin = this.getShopSkin(id);
+        const price = skin ? skin.price : this.birdPrice;
+        if (this.coinBalance < price) {
             this.refreshShopUi('金币不足');
             return;
         }
 
-        this.coinBalance -= this.birdPrice;
+        this.coinBalance -= price;
         this.ownedBirds.add(id);
         this.saveCoinBalance();
         this.saveOwnedBirds();
@@ -307,8 +382,13 @@ export class StartMenu extends Component {
     private selectBird(id: BirdSkinId): void {
         this.selectedBird = id;
         sys.localStorage.setItem(this.selectedBirdKey, id);
+        this.refreshStartBirdFrame();
+    }
+
+    private refreshStartBirdFrame(): void {
         this.birdFrameIndex = 0;
-        this.setSpriteFrame(this.bird, this.getSelectedBirdFrames()[0] || null);
+        this.birdAnimTimer = 0;
+        this.setSpriteFrame(this.bird, this.getSelectedBirdFrames()[0] || this.birdFrames[0] || null);
     }
 
     private refreshShopUi(message: string): void {
@@ -320,16 +400,12 @@ export class StartMenu extends Component {
         }
 
         for (const skin of this.getShopSkins()) {
-            if (!skin.actionLabel) {
-                continue;
+            const owned = this.ownedBirds.has(skin.id);
+            if (skin.priceLabel) {
+                skin.priceLabel.string = owned ? '0' : String(skin.price);
             }
-
-            if (this.selectedBird === skin.id) {
-                skin.actionLabel.string = '已选择';
-            } else if (this.ownedBirds.has(skin.id)) {
-                skin.actionLabel.string = '使用';
-            } else {
-                skin.actionLabel.string = this.coinBalance >= this.birdPrice ? `购买 ${this.birdPrice}` : '金币不足';
+            if (skin.selectedMark) {
+                skin.selectedMark.active = this.selectedBird === skin.id;
             }
         }
     }
@@ -375,30 +451,47 @@ export class StartMenu extends Component {
     private getShopSkins(): BirdSkinConfig[] {
         return [
             {
+                id: 'default',
+                frames: this.birdFrames,
+                preview: this.defaultBirdPreview,
+                priceLabel: this.defaultPriceLabel,
+                selectedMark: this.defaultSelectedMark,
+                price: 0,
+            },
+            {
                 id: 'red',
-                name: '红鸟',
                 frames: this.redBirdFrames,
                 preview: this.redBirdPreview,
-                actionButton: this.redActionButton,
-                actionLabel: this.redActionLabel,
+                priceLabel: this.redPriceLabel,
+                selectedMark: this.redSelectedMark,
+                price: this.birdPrice,
             },
             {
                 id: 'blue',
-                name: '蓝鸟',
                 frames: this.blueBirdFrames,
                 preview: this.blueBirdPreview,
-                actionButton: this.blueActionButton,
-                actionLabel: this.blueActionLabel,
+                priceLabel: this.bluePriceLabel,
+                selectedMark: this.blueSelectedMark,
+                price: this.birdPrice,
             },
             {
                 id: 'purple',
-                name: '紫鸟',
                 frames: this.purpleBirdFrames,
                 preview: this.purpleBirdPreview,
-                actionButton: this.purpleActionButton,
-                actionLabel: this.purpleActionLabel,
+                priceLabel: this.purplePriceLabel,
+                selectedMark: this.purpleSelectedMark,
+                price: this.birdPrice,
             },
         ];
+    }
+
+    private getShopSkin(id: BirdSkinId): BirdSkinConfig | null {
+        for (const skin of this.getShopSkins()) {
+            if (skin.id === id) {
+                return skin;
+            }
+        }
+        return null;
     }
 
     private getSelectedBirdFrames(): SpriteFrame[] {
