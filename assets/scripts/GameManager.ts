@@ -16,6 +16,7 @@ import {
     Vec3,
     view,
 } from 'cc';
+import { AudioManager, AudioSettings } from './AudioManager';
 
 const { ccclass, property } = _decorator;
 
@@ -136,6 +137,7 @@ export class GameManager extends Component {
 
     protected onLoad(): void {
         this.refreshScreenSize();
+        AudioManager.ensure();
         this.audioSource = getOrAddComponent(this.node, AudioSource);
         this.loadHitSound();
         this.bestScore = Number.parseInt(sys.localStorage.getItem(this.bestScoreKey) || '0', 10) || 0;
@@ -462,7 +464,7 @@ export class GameManager extends Component {
     }
 
     private playHitSound(): void {
-        if (!this.audioSource || !this.hitClip || this.hitSoundTimer > 0) {
+        if (!AudioSettings.isSoundEnabled() || !this.audioSource || !this.hitClip || this.hitSoundTimer > 0) {
             return;
         }
 

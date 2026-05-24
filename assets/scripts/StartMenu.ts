@@ -9,6 +9,7 @@ import {
     sys,
     view,
 } from 'cc';
+import { AudioManager, AudioSettings } from './AudioManager';
 
 const { ccclass, property } = _decorator;
 
@@ -60,6 +61,24 @@ export class StartMenu extends Component {
 
     @property(Label)
     public closeShopLabel: Label | null = null;
+
+    @property(Node)
+    public settingButton: Node | null = null;
+
+    @property(Node)
+    public settingPanel: Node | null = null;
+
+    @property(Node)
+    public musicSwitch: Node | null = null;
+
+    @property(Node)
+    public soundSwitch: Node | null = null;
+
+    @property(Node)
+    public closeSettingButton: Node | null = null;
+
+    @property(Label)
+    public closeSettingLabel: Label | null = null;
 
     @property(Node)
     public defaultBirdPreview: Node | null = null;
@@ -121,6 +140,12 @@ export class StartMenu extends Component {
     @property(SpriteFrame)
     public buttonPressedFrame: SpriteFrame | null = null;
 
+    @property(SpriteFrame)
+    public switchOnFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
+    public switchOffFrame: SpriteFrame | null = null;
+
     @property([SpriteFrame])
     public birdFrames: SpriteFrame[] = [];
 
@@ -149,6 +174,7 @@ export class StartMenu extends Component {
     private ownedBirds = new Set<BirdSkinId>(['default']);
     private pressedButton: Node | null = null;
     private pressedSkinPreview: Node | null = null;
+    private pressedPlainNode: Node | null = null;
     private isLoadingGame = false;
 
     private readonly birdFrameInterval = 0.12;
@@ -156,6 +182,7 @@ export class StartMenu extends Component {
     private readonly birdFloatDuration = 1.5;
 
     protected onLoad(): void {
+        AudioManager.ensure();
         this.resolveSceneNodes();
         this.loadShopState();
         this.configureSceneNodes();
@@ -175,6 +202,8 @@ export class StartMenu extends Component {
         this.button = this.button || this.contentRoot.getChildByName('StartButton');
         this.shopButton = this.shopButton || this.contentRoot.getChildByName('ShopButton');
         this.shopPanel = this.shopPanel || this.contentRoot.getChildByName('ShopPanel');
+        this.settingButton = this.settingButton || this.contentRoot.getChildByName('SettingButton');
+        this.settingPanel = this.settingPanel || this.contentRoot.getChildByName('SettingPanel');
 
         this.buttonLabel = this.buttonLabel || this.getLabelByPath('StartButton/StartButtonLabel');
         this.shopButtonLabel = this.shopButtonLabel || this.getLabelByPath('ShopButton/ShopButtonLabel');
@@ -182,6 +211,10 @@ export class StartMenu extends Component {
         this.shopMessageLabel = this.shopMessageLabel || this.getLabelByPath('ShopPanel/ShopMessageLabel');
         this.closeShopButton = this.closeShopButton || this.getNodeByPath('ShopPanel/CloseShopButton');
         this.closeShopLabel = this.closeShopLabel || this.getLabelByPath('ShopPanel/CloseShopButton/CloseShopLabel');
+        this.musicSwitch = this.musicSwitch || this.getNodeByPath('SettingPanel/MusicSwitch');
+        this.soundSwitch = this.soundSwitch || this.getNodeByPath('SettingPanel/SoundSwitch');
+        this.closeSettingButton = this.closeSettingButton || this.getNodeByPath('SettingPanel/CloseSettingButton');
+        this.closeSettingLabel = this.closeSettingLabel || this.getLabelByPath('SettingPanel/CloseSettingButton/CloseSettingLabel');
 
         this.defaultBirdPreview = this.defaultBirdPreview || this.getNodeByPath('ShopPanel/DefaultBirdPreview');
         this.redBirdPreview = this.redBirdPreview || this.getNodeByPath('ShopPanel/RedBirdPreview');
@@ -214,6 +247,7 @@ export class StartMenu extends Component {
         this.configureButton(this.button, this.buttonLabel, '跃动小鸟');
         this.configureButton(this.shopButton, this.shopButtonLabel, '小鸟商店');
         this.configureButton(this.closeShopButton, this.closeShopLabel, '返回');
+        this.configureButton(this.closeSettingButton, this.closeSettingLabel, '关闭');
         this.hideLegacyPurchaseButtons();
 
         for (const skin of this.getShopSkins()) {
@@ -225,7 +259,11 @@ export class StartMenu extends Component {
         if (this.shopPanel) {
             this.shopPanel.active = false;
         }
+        if (this.settingPanel) {
+            this.settingPanel.active = false;
+        }
 
+        this.refreshSettingSwitches();
         this.refreshShopUi('');
     }
 
@@ -249,6 +287,10 @@ export class StartMenu extends Component {
         this.bindButton(this.button, () => this.enterGame());
         this.bindButton(this.shopButton, () => this.openShop());
         this.bindButton(this.closeShopButton, () => this.closeShop());
+        this.bindPlainTap(this.settingButton, () => this.openSettingPanel());
+        this.bindButton(this.closeSettingButton, () => this.closeSettingPanel());
+        this.bindPlainTap(this.musicSwitch, () => this.toggleMusic());
+        this.bindPlainTap(this.soundSwitch, () => this.toggleSound());
         this.bindSkinPreview(this.defaultBirdPreview, 'default');
         this.bindSkinPreview(this.redBirdPreview, 'red');
         this.bindSkinPreview(this.blueBirdPreview, 'blue');
@@ -300,6 +342,65 @@ export class StartMenu extends Component {
                 this.handleSkinAction(id);
             }
         }, this);
+    }
+
+    private bindPlainTap(node: Node | null, onClick: () => void): void {
+        if (!node) {
+            return;
+        }
+
+        node.on(Node.EventType.TOUCH_START, () => {
+            this.pressedPlainNode = node;
+        }, this);
+        node.on(Node.EventType.TOUCH_CANCEL, () => {
+            if (this.pressedPlainNode === node) {
+                this.pressedPlainNode = null;
+            }
+        }, this);
+        node.on(Node.EventType.TOUCH_END, () => {
+            const shouldClick = this.pressedPlainNode === node;
+            this.pressedPlainNode = null;
+            if (shouldClick) {
+                onClick();
+            }
+        }, this);
+    }
+
+    private openSettingPanel(): void {
+        if (!this.settingPanel) {
+            return;
+        }
+
+        this.refreshSettingSwitches();
+        this.settingPanel.active = true;
+    }
+
+    private closeSettingPanel(): void {
+        if (this.settingPanel) {
+            this.settingPanel.active = false;
+        }
+    }
+
+    private toggleMusic(): void {
+        AudioSettings.setMusicEnabled(!AudioSettings.isMusicEnabled());
+        this.refreshSettingSwitches();
+        AudioManager.refreshMusic();
+    }
+
+    private toggleSound(): void {
+        AudioSettings.setSoundEnabled(!AudioSettings.isSoundEnabled());
+        this.refreshSettingSwitches();
+    }
+
+    private refreshSettingSwitches(): void {
+        this.setSpriteFrame(
+            this.musicSwitch,
+            AudioSettings.isMusicEnabled() ? this.switchOnFrame : this.switchOffFrame,
+        );
+        this.setSpriteFrame(
+            this.soundSwitch,
+            AudioSettings.isSoundEnabled() ? this.switchOnFrame : this.switchOffFrame,
+        );
     }
 
     private hideLegacyPurchaseButtons(): void {
