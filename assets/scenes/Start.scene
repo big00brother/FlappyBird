@@ -5031,12 +5031,24 @@
     "shopMessageLabel": null,
     "closeShopButton": null,
     "closeShopLabel": null,
-    "settingButton": null,
-    "settingPanel": null,
-    "musicSwitch": null,
-    "soundSwitch": null,
-    "closeSettingButton": null,
-    "closeSettingLabel": null,
+    "settingButton": {
+      "__id__": 94
+    },
+    "settingPanel": {
+      "__id__": 97
+    },
+    "musicSwitch": {
+      "__id__": 104
+    },
+    "soundSwitch": {
+      "__id__": 107
+    },
+    "closeSettingButton": {
+      "__id__": 110
+    },
+    "closeSettingLabel": {
+      "__id__": 113
+    },
     "defaultBirdPreview": null,
     "redBirdPreview": null,
     "blueBirdPreview": null,
@@ -5063,8 +5075,14 @@
       "__uuid__": "22c174ef-34c8-4004-95b2-4ecc275b31ee@f9941",
       "__expectedType__": "cc.SpriteFrame"
     },
-    "switchOnFrame": null,
-    "switchOffFrame": null,
+    "switchOnFrame": {
+      "__uuid__": "ece60b8d-fc11-41c2-bec7-60fb48f8b412@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "switchOffFrame": {
+      "__uuid__": "14344262-0693-44cb-a113-0821b75a68ba@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
     "birdFrames": [
       {
         "__uuid__": "6f10d5c1-4ae8-4b48-a065-d09bf09e7d10@f9941",

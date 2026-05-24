@@ -26,7 +26,7 @@ export class AudioManager {
     private static musicSource: AudioSource | null = null;
     private static musicClip: AudioClip | null = null;
     private static loadingMusic = false;
-    private static loadAttempted = false;
+    private static readonly musicVolume = 0.35;
 
     public static ensure(): void {
         if (!this.node || !this.node.isValid) {
@@ -45,6 +45,8 @@ export class AudioManager {
             return;
         }
 
+        this.loadBackgroundMusic();
+        this.musicSource.volume = this.musicVolume;
         if (!AudioSettings.isMusicEnabled() || !this.musicClip) {
             this.musicSource.stop();
             return;
@@ -59,12 +61,11 @@ export class AudioManager {
     }
 
     private static loadBackgroundMusic(): void {
-        if (this.musicClip || this.loadingMusic || this.loadAttempted) {
+        if (this.musicClip || this.loadingMusic) {
             return;
         }
 
         this.loadingMusic = true;
-        this.loadAttempted = true;
         resources.load('audio/bgm', AudioClip, (error, clip) => {
             this.loadingMusic = false;
             if (error || !clip) {
