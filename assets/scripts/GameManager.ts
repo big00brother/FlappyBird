@@ -44,10 +44,16 @@ export class GameManager extends Component {
     public landFrame: SpriteFrame | null = null;
 
     @property(SpriteFrame)
+    public landFillFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
     public pipeUpFrame: SpriteFrame | null = null;
 
     @property(SpriteFrame)
     public pipeDownFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
+    public pipeBodyFrame: SpriteFrame | null = null;
 
     @property(SpriteFrame)
     public hpFrame: SpriteFrame | null = null;
@@ -104,6 +110,7 @@ export class GameManager extends Component {
     private jumpClip: AudioClip | null = null;
     private coinClip: AudioClip | null = null;
     private lands: Node[] = [];
+    private landFills: Node[] = [];
     private hpNodes: Node[] = [];
     private pipes: PipePair[] = [];
     private activeBirdFrames: SpriteFrame[] = [];
@@ -128,6 +135,7 @@ export class GameManager extends Component {
     private landScale = 2;
     private pipeScale = 2;
     private landHeight = 224;
+    private landFillHeight = 320;
     private landWidth = 672;
     private floorY = -336;
     private birdHeight = 86.4;
@@ -143,7 +151,7 @@ export class GameManager extends Component {
     private jumpVelocity = 640;
     private pipeSpeed = 220;
     private pipeInterval = 1.55;
-    private landOffsetY = -80;
+    private landOffsetY = 100;
     private maxLives = 3;
     private invincibleDuration = 1;
     private pipeBreakSpeed = 820;
@@ -224,15 +232,28 @@ export class GameManager extends Component {
 
     private createLand(): void {
         this.landHeight = 112 * this.landScale;
+        this.landFillHeight = 160 * this.landScale;
         this.landWidth = 336 * this.landScale;
         this.floorY = -this.screenHeight / 2 + this.landHeight + this.landOffsetY;
 
         for (let i = 0; i < 2; i++) {
+            const x = i * this.landWidth;
+            if (this.landFillFrame) {
+                const fill = this.createSpriteNode(`LandFill_${i}`, this.landFillFrame, this.world, 336, 160);
+                fill.setScale(this.landScale, this.landScale, 1);
+                fill.setPosition(x, this.getLandFillY(), 0);
+                this.landFills.push(fill);
+            }
+
             const land = this.createSpriteNode(`Land_${i}`, this.landFrame, this.world, 336, 112);
             land.setScale(this.landScale, this.landScale, 1);
-            land.setPosition(i * this.landWidth, this.floorY - this.landHeight / 2);
+            land.setPosition(x, this.floorY - this.landHeight / 2);
             this.lands.push(land);
         }
+    }
+
+    private getLandFillY(): number {
+        return this.floorY - this.landHeight - this.landFillHeight / 2 + 2;
     }
 
     private createBird(): void {
@@ -629,10 +650,18 @@ export class GameManager extends Component {
     }
 
     private updateLand(deltaTime: number): void {
-        for (const land of this.lands) {
-            land.setPosition(land.position.x - this.pipeSpeed * deltaTime, land.position.y, 0);
-            if (land.position.x <= -this.landWidth) {
-                land.setPosition(land.position.x + this.landWidth * this.lands.length, land.position.y, 0);
+        for (let i = 0; i < this.lands.length; i++) {
+            const land = this.lands[i];
+            let nextX = land.position.x - this.pipeSpeed * deltaTime;
+            if (nextX <= -this.landWidth) {
+                nextX += this.landWidth * this.lands.length;
+            }
+
+            land.setPosition(nextX, land.position.y, 0);
+
+            const fill = this.landFills[i];
+            if (fill) {
+                fill.setPosition(nextX, this.getLandFillY(), 0);
             }
         }
     }
@@ -652,7 +681,7 @@ export class GameManager extends Component {
 
             if (pair.topBreaking) {
                 pair.top.setPosition(pair.top.position.x, pair.top.position.y + this.pipeBreakSpeed * deltaTime, 0);
-                if (pair.top.worldPosition.y > this.node.worldPosition.y + this.screenHeight / 2 + this.pipeHeight) {
+                if (getNodeRect(pair.top).bottom > this.node.worldPosition.y + this.screenHeight / 2 + 120) {
                     pair.top.active = false;
                     pair.topGone = true;
                     pair.topBreaking = false;
@@ -661,7 +690,7 @@ export class GameManager extends Component {
 
             if (pair.bottomBreaking) {
                 pair.bottom.setPosition(pair.bottom.position.x, pair.bottom.position.y - this.pipeBreakSpeed * deltaTime, 0);
-                if (pair.bottom.worldPosition.y < this.node.worldPosition.y - this.screenHeight / 2 - this.pipeHeight) {
+                if (getNodeRect(pair.bottom).top < this.node.worldPosition.y - this.screenHeight / 2 - 120) {
                     pair.bottom.active = false;
                     pair.bottomGone = true;
                     pair.bottomBreaking = false;
@@ -717,7 +746,7 @@ export class GameManager extends Component {
 
         const gapRangeByBird = this.getCurrentGapRange();
         const gapHeight = this.birdHeight * (gapRangeByBird.min + Math.random() * (gapRangeByBird.max - gapRangeByBird.min));
-        const minGapCenter = this.floorY + gapHeight / 2 + 80;
+        const minGapCenter = this.floorY + gapHeight / 2 + 160;
         const maxGapCenter = this.screenHeight / 2 - gapHeight / 2 - 140;
         const gapRange = Math.max(0, maxGapCenter - minGapCenter);
         const gapCenterY = minGapCenter + Math.random() * gapRange;
@@ -726,13 +755,13 @@ export class GameManager extends Component {
         root.setParent(this.pipeLayer);
         root.setPosition(this.screenWidth / 2 + this.pipeWidth + 40, 0, 0);
 
-        const top = this.createSpriteNode('PipeDown', this.pipeDownFrame, root, 52, 320);
-        top.setScale(this.pipeScale, this.pipeScale, 1);
-        top.setPosition(0, gapCenterY + gapHeight / 2 + this.pipeHeight / 2, 0);
+        const gapTopY = gapCenterY + gapHeight / 2;
+        const gapBottomY = gapCenterY - gapHeight / 2;
+        const screenTopY = this.screenHeight / 2 + 120;
+        const screenBottomY = -this.screenHeight / 2 - 120;
 
-        const bottom = this.createSpriteNode('PipeUp', this.pipeUpFrame, root, 52, 320);
-        bottom.setScale(this.pipeScale, this.pipeScale, 1);
-        bottom.setPosition(0, gapCenterY - gapHeight / 2 - this.pipeHeight / 2, 0);
+        const top = this.createPipeObstacle('PipeDown', this.pipeDownFrame, root, gapTopY, screenTopY, 1);
+        const bottom = this.createPipeObstacle('PipeUp', this.pipeUpFrame, root, gapBottomY, screenBottomY, -1);
 
         const coins = this.createCoins(root, gapCenterY, gapHeight);
 
@@ -747,6 +776,41 @@ export class GameManager extends Component {
             topGone: false,
             bottomGone: false,
         });
+    }
+
+    private createPipeObstacle(name: string, capFrame: SpriteFrame | null, parent: Node, gapEdgeY: number, endY: number, direction: 1 | -1): Node {
+        const height = Math.max(this.pipeHeight, Math.abs(endY - gapEdgeY));
+        const centerY = gapEdgeY + direction * height / 2;
+        const obstacle = new Node(name);
+        obstacle.setParent(parent);
+        obstacle.setPosition(0, centerY, 0);
+        getOrAddComponent(obstacle, UITransform).setContentSize(this.pipeWidth, height);
+
+        const cap = this.createSpriteNode(`${name}Cap`, capFrame, obstacle, 52, 320);
+        cap.setScale(this.pipeScale, this.pipeScale, 1);
+        cap.setPosition(0, direction > 0 ? -height / 2 + this.pipeHeight / 2 : height / 2 - this.pipeHeight / 2, 0);
+
+        if (!this.pipeBodyFrame) {
+            return obstacle;
+        }
+
+        const bodyHeight = 64 * this.pipeScale;
+        const capVisibleHeight = 86;
+        let bodyY = direction > 0
+            ? -height / 2 + capVisibleHeight + bodyHeight / 2
+            : height / 2 - capVisibleHeight - bodyHeight / 2;
+        const limitY = direction > 0 ? height / 2 + bodyHeight / 2 : -height / 2 - bodyHeight / 2;
+        let bodyIndex = 0;
+
+        while (direction > 0 ? bodyY < limitY : bodyY > limitY) {
+            const body = this.createSpriteNode(`${name}Body_${bodyIndex}`, this.pipeBodyFrame, obstacle, 52, 64);
+            body.setScale(this.pipeScale, this.pipeScale, 1);
+            body.setPosition(0, bodyY, 0);
+            bodyY += direction * bodyHeight;
+            bodyIndex += 1;
+        }
+
+        return obstacle;
     }
 
     private getCurrentGapRange(): { min: number; max: number } {
@@ -945,6 +1009,10 @@ export class GameManager extends Component {
 
         for (const land of this.lands) {
             land.setPosition(land.position.x, this.floorY - this.landHeight / 2, 0);
+        }
+        for (let i = 0; i < this.landFills.length; i++) {
+            const land = this.lands[i];
+            this.landFills[i].setPosition(land ? land.position.x : this.landFills[i].position.x, this.getLandFillY(), 0);
         }
     }
 

@@ -1884,12 +1884,20 @@
       "__uuid__": "71cd54d7-85f1-4896-88c2-cb6e726ffc69@f9941",
       "__expectedType__": "cc.SpriteFrame"
     },
+    "landFillFrame": {
+      "__uuid__": "f113f615-2bd6-4f78-988f-fe2fb762fc32@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
     "pipeUpFrame": {
       "__uuid__": "abc49661-27e7-4de7-9952-89710fd29804@f9941",
       "__expectedType__": "cc.SpriteFrame"
     },
     "pipeDownFrame": {
       "__uuid__": "ca296bb3-f313-49e4-838d-9a2389f93770@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "pipeBodyFrame": {
+      "__uuid__": "5b5f6932-3e07-4e73-b27c-570000235ec2@f9941",
       "__expectedType__": "cc.SpriteFrame"
     },
     "hpFrame": {
