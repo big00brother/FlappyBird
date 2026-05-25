@@ -694,11 +694,17 @@ export class StartMenu extends Component {
     }
 
     private updateContentFit(): void {
+        const visibleSize = view.getVisibleSize();
+        if (this.background) {
+            const backgroundScale = Math.max(visibleSize.width / 288, visibleSize.height / 512);
+            this.background.setScale(backgroundScale, backgroundScale, 1);
+            this.background.setPosition(0, 0, 0);
+        }
+
         if (!this.contentRoot || this.contentRoot === this.node) {
             return;
         }
 
-        const visibleSize = view.getVisibleSize();
         const fitScale = Math.min(visibleSize.width / this.designWidth, visibleSize.height / this.designHeight);
         this.contentRoot.setScale(fitScale, fitScale, 1);
         this.contentRoot.setPosition(0, 0, 0);
