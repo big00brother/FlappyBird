@@ -1,12 +1,18 @@
 import {
     _decorator,
+    Color,
     Component,
     director,
+    Graphics,
     Label,
     Node,
     Sprite,
     SpriteFrame,
     sys,
+    Tween,
+    tween,
+    UIOpacity,
+    UITransform,
     view,
 } from 'cc';
 import { AudioManager, AudioSettings } from './AudioManager';
@@ -161,7 +167,7 @@ export class StartMenu extends Component {
     private readonly coinScoreKey = 'flappy_coin_score';
     private readonly ownedBirdsKey = 'flappy_owned_birds';
     private readonly selectedBirdKey = 'flappy_selected_bird';
-    private readonly birdPrice = 100;
+    private readonly birdPrice = 200;
     private readonly designWidth = 640;
     private readonly designHeight = 1280;
 
@@ -175,6 +181,7 @@ export class StartMenu extends Component {
     private pressedButton: Node | null = null;
     private pressedSkinPreview: Node | null = null;
     private pressedPlainNode: Node | null = null;
+    private notEnoughToast: Node | null = null;
     private isLoadingGame = false;
 
     private readonly birdFrameInterval = 0.12;
@@ -468,7 +475,8 @@ export class StartMenu extends Component {
         const skin = this.getShopSkin(id);
         const price = skin ? skin.price : this.birdPrice;
         if (this.coinBalance < price) {
-            this.refreshShopUi('金币不足');
+            this.refreshShopUi('');
+            this.showNotEnoughToast();
             return;
         }
 
@@ -509,6 +517,72 @@ export class StartMenu extends Component {
                 skin.selectedMark.active = this.selectedBird === skin.id;
             }
         }
+    }
+
+    private showNotEnoughToast(): void {
+        const toast = this.getOrCreateNotEnoughToast();
+        if (!toast) {
+            return;
+        }
+
+        const opacity = toast.getComponent(UIOpacity) || toast.addComponent(UIOpacity);
+        Tween.stopAllByTarget(opacity);
+        opacity.opacity = 255;
+        toast.active = true;
+        toast.setSiblingIndex(toast.parent ? toast.parent.children.length - 1 : 0);
+
+        tween(opacity)
+            .delay(0.45)
+            .to(0.75, { opacity: 0 })
+            .call(() => {
+                toast.active = false;
+            })
+            .start();
+    }
+
+    private getOrCreateNotEnoughToast(): Node | null {
+        if (this.notEnoughToast?.isValid) {
+            return this.notEnoughToast;
+        }
+        if (!this.shopPanel) {
+            return null;
+        }
+
+        const toast = new Node('NotEnoughToast');
+        toast.layer = this.shopPanel.layer;
+        toast.setParent(this.shopPanel);
+        toast.setPosition(0, -80, 0);
+
+        const transform = toast.addComponent(UITransform);
+        transform.setContentSize(520, 88);
+
+        const opacity = toast.addComponent(UIOpacity);
+        opacity.opacity = 0;
+
+        const background = toast.addComponent(Graphics);
+        background.fillColor = new Color(18, 72, 76, 178);
+        background.roundRect(-260, -44, 520, 88, 18);
+        background.fill();
+
+        const labelNode = new Node('NotEnoughToastLabel');
+        labelNode.layer = toast.layer;
+        labelNode.setParent(toast);
+
+        const labelTransform = labelNode.addComponent(UITransform);
+        labelTransform.setContentSize(520, 88);
+
+        const label = labelNode.addComponent(Label);
+        label.string = '金币不够！';
+        label.fontSize = 42;
+        label.lineHeight = 50;
+        label.isBold = true;
+        label.color = new Color(255, 255, 255, 255);
+        label.horizontalAlign = Label.HorizontalAlign.CENTER;
+        label.verticalAlign = Label.VerticalAlign.CENTER;
+
+        toast.active = false;
+        this.notEnoughToast = toast;
+        return toast;
     }
 
     private loadShopState(): void {
