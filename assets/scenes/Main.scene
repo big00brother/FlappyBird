@@ -575,7 +575,7 @@
     },
     "_type": 0,
     "_fillType": 0,
-    "_sizeMode": 1,
+    "_sizeMode": 0,
     "_fillCenter": {
       "__type__": "cc.Vec2",
       "x": 0,
@@ -684,7 +684,7 @@
     },
     "_type": 0,
     "_fillType": 0,
-    "_sizeMode": 1,
+    "_sizeMode": 0,
     "_fillCenter": {
       "__type__": "cc.Vec2",
       "x": 0,
@@ -1900,6 +1900,18 @@
       "__uuid__": "4a5a76e4-c162-45a0-90c7-2da7e6922f9d@f9941",
       "__expectedType__": "cc.SpriteFrame"
     },
+    "gameOverPanelFrame": {
+      "__uuid__": "bc63f55f-4d88-4ed3-9014-504c48542462@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "buttonNormalFrame": {
+      "__uuid__": "72b2f4d1-6192-45d9-9ab6-1b231bf9a9d0@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "buttonPressedFrame": {
+      "__uuid__": "22c174ef-34c8-4004-95b2-4ecc275b31ee@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
     "coinFrames": [
       {
         "__uuid__": "4a5a76e4-c162-45a0-90c7-2da7e6922f9d@f9941",
@@ -1952,7 +1964,6 @@
         "__expectedType__": "cc.SpriteFrame"
       }
     ],
-    "_id": "0b0IarTTRGPp6CTZP+xtac",
     "redBirdFrames": [
       {
         "__uuid__": "af903fcb-d19b-4304-b7e7-65ce9ad44c2e@f9941",
@@ -1995,18 +2006,7 @@
         "__expectedType__": "cc.SpriteFrame"
       }
     ],
-    "gameOverPanelFrame": {
-      "__uuid__": "bc63f55f-4d88-4ed3-9014-504c48542462@f9941",
-      "__expectedType__": "cc.SpriteFrame"
-    },
-    "buttonNormalFrame": {
-      "__uuid__": "72b2f4d1-6192-45d9-9ab6-1b231bf9a9d0@f9941",
-      "__expectedType__": "cc.SpriteFrame"
-    },
-    "buttonPressedFrame": {
-      "__uuid__": "22c174ef-34c8-4004-95b2-4ecc275b31ee@f9941",
-      "__expectedType__": "cc.SpriteFrame"
-    }
+    "_id": "0b0IarTTRGPp6CTZP+xtac"
   },
   {
     "__type__": "cc.SceneGlobals",
