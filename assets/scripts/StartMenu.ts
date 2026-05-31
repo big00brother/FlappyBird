@@ -54,6 +54,12 @@ export class StartMenu extends Component {
     public shopButtonLabel: Label | null = null;
 
     @property(Node)
+    public woodJumpButton: Node | null = null;
+
+    @property(Label)
+    public woodJumpButtonLabel: Label | null = null;
+
+    @property(Node)
     public shopPanel: Node | null = null;
 
     @property(Label)
@@ -208,12 +214,14 @@ export class StartMenu extends Component {
         this.bird = this.bird || this.contentRoot.getChildByName('StartBird');
         this.button = this.button || this.contentRoot.getChildByName('StartButton');
         this.shopButton = this.shopButton || this.contentRoot.getChildByName('ShopButton');
+        this.woodJumpButton = this.woodJumpButton || this.contentRoot.getChildByName('WoodJumpButton');
         this.shopPanel = this.shopPanel || this.contentRoot.getChildByName('ShopPanel');
         this.settingButton = this.settingButton || this.contentRoot.getChildByName('SettingButton');
         this.settingPanel = this.settingPanel || this.contentRoot.getChildByName('SettingPanel');
 
         this.buttonLabel = this.buttonLabel || this.getLabelByPath('StartButton/StartButtonLabel');
         this.shopButtonLabel = this.shopButtonLabel || this.getLabelByPath('ShopButton/ShopButtonLabel');
+        this.woodJumpButtonLabel = this.woodJumpButtonLabel || this.getLabelByPath('WoodJumpButton/WoodJumpButtonLabel');
         this.coinBalanceLabel = this.coinBalanceLabel || this.getLabelByPath('ShopPanel/CoinBalanceLabel');
         this.shopMessageLabel = this.shopMessageLabel || this.getLabelByPath('ShopPanel/ShopMessageLabel');
         this.closeShopButton = this.closeShopButton || this.getNodeByPath('ShopPanel/CloseShopButton');
@@ -251,7 +259,8 @@ export class StartMenu extends Component {
             this.refreshStartBirdFrame();
         }
 
-        this.configureButton(this.button, this.buttonLabel, '跃动小鸟');
+        this.configureButton(this.button, this.buttonLabel, '跃动小飞鸟');
+        this.configureButton(this.woodJumpButton, this.woodJumpButtonLabel, '小鸟向上飞');
         this.configureButton(this.shopButton, this.shopButtonLabel, '小鸟商店');
         this.configureButton(this.closeShopButton, this.closeShopLabel, '返回');
         this.configureButton(this.closeSettingButton, this.closeSettingLabel, '关闭');
@@ -292,6 +301,7 @@ export class StartMenu extends Component {
 
     private bindButtonEvents(): void {
         this.bindButton(this.button, () => this.enterGame());
+        this.bindButton(this.woodJumpButton, () => this.enterWoodJump());
         this.bindButton(this.shopButton, () => this.openShop());
         this.bindButton(this.closeShopButton, () => this.closeShop());
         this.bindPlainTap(this.settingButton, () => this.openSettingPanel());
@@ -431,6 +441,15 @@ export class StartMenu extends Component {
         director.loadScene('Main');
     }
 
+    private enterWoodJump(): void {
+        if (this.isLoadingGame) {
+            return;
+        }
+
+        this.isLoadingGame = true;
+        director.loadScene('WoodJump');
+    }
+
     private openShop(): void {
         if (!this.shopPanel) {
             return;
@@ -442,6 +461,9 @@ export class StartMenu extends Component {
         }
         if (this.shopButton) {
             this.shopButton.active = false;
+        }
+        if (this.woodJumpButton) {
+            this.woodJumpButton.active = false;
         }
         if (this.bird) {
             this.bird.active = false;
@@ -458,6 +480,9 @@ export class StartMenu extends Component {
         }
         if (this.shopButton) {
             this.shopButton.active = true;
+        }
+        if (this.woodJumpButton) {
+            this.woodJumpButton.active = true;
         }
         if (this.bird) {
             this.bird.active = true;
