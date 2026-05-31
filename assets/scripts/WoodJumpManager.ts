@@ -111,12 +111,13 @@ export class WoodJumpManager extends Component {
     private birdHeight = 86.4;
     private maxLives = 3;
     private gravity = -1780;
-    private jumpVelocity = 820;
+    private jumpVelocity = 1020;
     private horizontalJumpVelocity = 430;
     private horizontalDamping = 0.985;
     private bottomBounceVelocity = 760;
     private scrollThresholdRatio = 0.18;
-    private rowSpacing = 310;
+    private smoothScrollSpeed = 900;
+    private rowSpacing = 580;
     private barScale = 2;
     private barHeight = 104;
     private bodyWidth = 128;
@@ -158,7 +159,7 @@ export class WoodJumpManager extends Component {
 
         this.birdVelocityY += this.gravity * deltaTime;
         this.moveBird(deltaTime);
-        this.applyVerticalScroll();
+        this.applyVerticalScroll(deltaTime);
         this.updateRows(deltaTime);
         this.checkCollisions();
         this.scorePassedRows();
@@ -317,7 +318,7 @@ export class WoodJumpManager extends Component {
         this.bird.angle = Math.max(-35, Math.min(25, this.birdVelocityY / 28)) + this.lastJumpDirection * 7;
     }
 
-    private applyVerticalScroll(): void {
+    private applyVerticalScroll(deltaTime: number): void {
         if (!this.bird) {
             return;
         }
@@ -327,8 +328,9 @@ export class WoodJumpManager extends Component {
             return;
         }
 
-        const scroll = this.bird.position.y - thresholdY;
-        this.bird.setPosition(this.bird.position.x, thresholdY, 0);
+        const overflow = this.bird.position.y - thresholdY;
+        const scroll = Math.min(overflow, this.smoothScrollSpeed * deltaTime);
+        this.bird.setPosition(this.bird.position.x, this.bird.position.y - scroll, 0);
         for (const row of this.rows) {
             row.root.setPosition(row.root.position.x, row.root.position.y - scroll, 0);
         }
