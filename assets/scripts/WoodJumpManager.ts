@@ -123,7 +123,8 @@ export class WoodJumpManager extends Component {
     private barHeight = 104;
     private bodyWidth = 128;
     private capWidth = 160;
-    private capVisibleWidth = 104;
+    private capVisibleWidth = 80;
+    private capJoinOverlap = 4;
     private gapBirdWidthMin = 3;
     private gapBirdWidthMax = 3.4;
     private gapCenterRange = 70;
@@ -403,8 +404,8 @@ export class WoodJumpManager extends Component {
             return bar;
         }
 
-        const bodyStartX = side === 'left' ? -width / 2 : -width / 2 + this.capVisibleWidth;
-        const bodyEndX = side === 'left' ? width / 2 - this.capVisibleWidth : width / 2;
+        const bodyStartX = side === 'left' ? -width / 2 : -width / 2 + this.capVisibleWidth - this.capJoinOverlap;
+        const bodyEndX = side === 'left' ? width / 2 - this.capVisibleWidth + this.capJoinOverlap : width / 2;
         const bodyFillWidth = Math.max(0, bodyEndX - bodyStartX);
         if (bodyFillWidth > 0) {
             const body = this.createSpriteNode(`${name}Body`, this.woodBodyFrame, bar, bodyFillWidth / this.barScale, 52);
