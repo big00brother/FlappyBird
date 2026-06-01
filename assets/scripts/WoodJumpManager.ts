@@ -116,12 +116,14 @@ export class WoodJumpManager extends Component {
     private horizontalDamping = 0.985;
     private bottomBounceVelocity = 760;
     private scrollThresholdRatio = 0;
-    private smoothScrollSpeed = 900;
+    private smoothScrollSpeed = 420;
+    private topSafeMargin = 120;
     private rowSpacing = 580;
     private barScale = 2;
     private barHeight = 104;
     private bodyWidth = 128;
     private capWidth = 160;
+    private capVisibleWidth = 104;
     private gapBirdWidthMin = 3;
     private gapBirdWidthMax = 3.4;
     private gapCenterRange = 70;
@@ -329,7 +331,13 @@ export class WoodJumpManager extends Component {
         }
 
         const overflow = this.bird.position.y - thresholdY;
-        const scroll = Math.min(overflow, this.smoothScrollSpeed * deltaTime);
+        let scroll = Math.min(overflow, this.smoothScrollSpeed * deltaTime);
+        const maxBirdY = this.screenHeight / 2 - this.topSafeMargin;
+        const nextBirdY = this.bird.position.y - scroll;
+        if (nextBirdY > maxBirdY) {
+            scroll += nextBirdY - maxBirdY;
+        }
+
         this.bird.setPosition(this.bird.position.x, this.bird.position.y - scroll, 0);
         for (const row of this.rows) {
             row.root.setPosition(row.root.position.x, row.root.position.y - scroll, 0);
@@ -395,14 +403,17 @@ export class WoodJumpManager extends Component {
             return bar;
         }
 
-        const firstBodyX = -width / 2 + this.bodyWidth / 2;
-        const lastBodyX = width / 2 - this.bodyWidth / 2;
-        let index = 0;
-        for (let x = firstBodyX; x <= lastBodyX + this.bodyWidth * 0.25; x += this.bodyWidth) {
-            const body = this.createSpriteNode(`${name}Body_${index}`, this.woodBodyFrame, bar, 64, 52);
+        const bodyStartX = side === 'left' ? -width / 2 : -width / 2 + this.capVisibleWidth;
+        const bodyEndX = side === 'left' ? width / 2 - this.capVisibleWidth : width / 2;
+        const bodyFillWidth = Math.max(0, bodyEndX - bodyStartX);
+        if (bodyFillWidth > 0) {
+            const body = this.createSpriteNode(`${name}Body`, this.woodBodyFrame, bar, bodyFillWidth / this.barScale, 52);
+            const bodySprite = body.getComponent(Sprite);
+            if (bodySprite) {
+                bodySprite.type = Sprite.Type.TILED;
+            }
             body.setScale(this.barScale, this.barScale, 1);
-            body.setPosition(x, 0, 0);
-            index += 1;
+            body.setPosition((bodyStartX + bodyEndX) / 2, 0, 0);
         }
 
         const cap = this.createSpriteNode(`${name}Cap`, this.woodCapFrame, bar, 80, 52);
