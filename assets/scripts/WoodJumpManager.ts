@@ -115,7 +115,7 @@ export class WoodJumpManager extends Component {
     private horizontalJumpVelocity = 430;
     private horizontalDamping = 0.985;
     private bottomBounceVelocity = 760;
-    private scrollThresholdRatio = 0.18;
+    private scrollThresholdRatio = 0;
     private smoothScrollSpeed = 900;
     private rowSpacing = 580;
     private barScale = 2;
