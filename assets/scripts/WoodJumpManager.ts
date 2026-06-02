@@ -93,9 +93,11 @@ export class WoodJumpManager extends Component {
     private gameOverPanel: Node | null = null;
     private restartButton: Node | null = null;
     private menuButton: Node | null = null;
+    private reviveButton: Node | null = null;
     private audioSource: AudioSource | null = null;
     private hitClip: AudioClip | null = null;
     private jumpClip: AudioClip | null = null;
+    private coinClip: AudioClip | null = null;
     private pressedGameOverButton: Node | null = null;
     private hpNodes: Node[] = [];
     private rows: WoodRow[] = [];
@@ -116,6 +118,7 @@ export class WoodJumpManager extends Component {
     private coinAnimTimer = 0;
     private nextRowY = 0;
     private lastJumpDirection: -1 | 1 = 1;
+    private reviveAvailable = true;
 
     private birdScale = 1.8;
     private birdWidth = 86.4;
@@ -144,6 +147,7 @@ export class WoodJumpManager extends Component {
     private hitSoundCooldown = 0.08;
     private hitSoundVolume = 0.85;
     private jumpSoundVolume = 0.55;
+    private coinSoundVolume = 0.65;
     private coinSize = 64;
     private coinGapRatio = 0.2;
     private coinCountMin = 3;
@@ -249,6 +253,7 @@ export class WoodJumpManager extends Component {
         this.createLabel('WoodJumpGameOverTitle', '游戏结束', 42, new Vec3(0, 95, 0), this.gameOverPanel);
         this.restartButton = this.createGameOverButton('WoodJumpRestartButton', '重新开始', () => this.restartGame());
         this.menuButton = this.createGameOverButton('WoodJumpMenuButton', '回到主菜单', () => this.backToMainMenu());
+        this.reviveButton = this.createGameOverButton('WoodJumpReviveButton', '立即复活', () => this.reviveGame());
         this.layoutGameOverPanel();
     }
 
@@ -270,6 +275,7 @@ export class WoodJumpManager extends Component {
         this.invincibleTimer = 0;
         this.coinAnimTimer = 0;
         this.nextRowY = 0;
+        this.reviveAvailable = true;
 
         for (const row of this.rows) {
             row.root.destroy();
@@ -294,6 +300,29 @@ export class WoodJumpManager extends Component {
 
     private backToMainMenu(): void {
         director.loadScene('Start');
+    }
+
+    private reviveGame(): void {
+        if (this.state !== 'gameOver' || !this.reviveAvailable) {
+            return;
+        }
+
+        this.reviveAvailable = false;
+        this.state = 'playing';
+        this.lives = this.maxLives;
+        this.invincibleTimer = this.invincibleDuration;
+        this.birdVelocityX = 0;
+        this.birdVelocityY = this.bottomBounceVelocity;
+        this.lastJumpDirection = 1;
+
+        if (this.bird) {
+            this.bird.setPosition(0, -this.screenHeight * 0.18, 0);
+            this.bird.angle = 0;
+        }
+
+        this.setBirdAlpha(90);
+        this.updateHud();
+        this.hideGameOverPanel();
     }
 
     private onTouchStart(event: EventTouch | EventMouse): void {
@@ -593,6 +622,7 @@ export class WoodJumpManager extends Component {
 
         this.coinScore += collected;
         sys.localStorage.setItem(this.coinScoreKey, String(this.coinScore));
+        this.playCoinSound();
         this.updateHud();
     }
 
@@ -783,23 +813,44 @@ export class WoodJumpManager extends Component {
         }
 
         const panelWidth = Math.min(500, Math.max(360, this.screenWidth * 0.78));
-        const panelHeight = panelWidth * 0.72;
+        let buttonWidth = Math.min(220, panelWidth * 0.5);
+        let buttonHeight = buttonWidth * (64 / 142);
+        const buttonGap = 16;
+        const buttons = [this.restartButton, this.menuButton, this.reviveButton].filter((button): button is Node => !!button && button.active);
+        const titleHeight = 58;
+        const topPadding = 34;
+        const titleGap = 18;
+        const bottomPadding = 30;
+        const maxPanelHeight = Math.max(300, this.screenHeight * 0.78);
+        let buttonBlockHeight = buttons.length * buttonHeight + Math.max(0, buttons.length - 1) * buttonGap;
+        let desiredPanelHeight = topPadding + titleHeight + titleGap + buttonBlockHeight + bottomPadding;
+
+        if (desiredPanelHeight > maxPanelHeight && buttons.length > 0) {
+            const availableButtonBlockHeight = maxPanelHeight - topPadding - titleHeight - titleGap - bottomPadding;
+            const maxButtonHeight = (availableButtonBlockHeight - Math.max(0, buttons.length - 1) * buttonGap) / buttons.length;
+            if (maxButtonHeight > 0 && maxButtonHeight < buttonHeight) {
+                buttonHeight = Math.max(42, maxButtonHeight);
+                buttonWidth = Math.min(buttonWidth, buttonHeight * (142 / 64));
+                buttonBlockHeight = buttons.length * buttonHeight + Math.max(0, buttons.length - 1) * buttonGap;
+                desiredPanelHeight = topPadding + titleHeight + titleGap + buttonBlockHeight + bottomPadding;
+            }
+        }
+
+        const panelHeight = Math.min(maxPanelHeight, Math.max(panelWidth * 0.72, desiredPanelHeight));
         getOrAddComponent(this.gameOverPanel, UITransform).setContentSize(panelWidth, panelHeight);
         this.gameOverPanel.setPosition(0, Math.min(60, this.screenHeight * 0.04), 0);
 
         const title = this.gameOverPanel.getChildByName('WoodJumpGameOverTitle');
         if (title) {
-            getOrAddComponent(title, UITransform).setContentSize(panelWidth * 0.9, 62);
-            title.setPosition(0, panelHeight * 0.28, 0);
+            getOrAddComponent(title, UITransform).setContentSize(panelWidth * 0.9, titleHeight);
+            title.setPosition(0, panelHeight / 2 - topPadding - titleHeight / 2, 0);
         }
 
-        const buttonWidth = Math.min(260, panelWidth * 0.56);
-        const buttonHeight = buttonWidth * (64 / 142);
-        const buttons = [this.restartButton, this.menuButton].filter((button): button is Node => !!button);
+        const firstY = panelHeight / 2 - topPadding - titleHeight - titleGap - buttonHeight / 2;
         for (let i = 0; i < buttons.length; i++) {
             const button = buttons[i];
             getOrAddComponent(button, UITransform).setContentSize(buttonWidth, buttonHeight);
-            button.setPosition(0, panelHeight * 0.06 - i * (buttonHeight + 24), 0);
+            button.setPosition(0, firstY - i * (buttonHeight + buttonGap), 0);
 
             const label = button.getChildByName(`${button.name}Label`);
             if (label) {
@@ -811,8 +862,12 @@ export class WoodJumpManager extends Component {
 
     private showGameOverPanel(): void {
         if (this.gameOverPanel) {
+            if (this.reviveButton) {
+                this.reviveButton.active = this.reviveAvailable;
+            }
             this.gameOverPanel.active = true;
             this.gameOverPanel.setSiblingIndex(this.gameOverPanel.parent ? this.gameOverPanel.parent.children.length - 1 : 0);
+            this.layoutGameOverPanel();
         }
     }
 
@@ -851,6 +906,9 @@ export class WoodJumpManager extends Component {
         this.loadAudioClip('audio/jump', (clip) => {
             this.jumpClip = clip;
         });
+        this.loadAudioClip('audio/coin', (clip) => {
+            this.coinClip = clip;
+        });
     }
 
     private loadAudioClip(path: string, onLoaded: (clip: AudioClip) => void): void {
@@ -879,6 +937,14 @@ export class WoodJumpManager extends Component {
         }
 
         this.audioSource.playOneShot(this.jumpClip, this.jumpSoundVolume);
+    }
+
+    private playCoinSound(): void {
+        if (!AudioSettings.isSoundEnabled() || !this.audioSource || !this.coinClip) {
+            return;
+        }
+
+        this.audioSource.playOneShot(this.coinClip, this.coinSoundVolume);
     }
 
     private getSelectedBirdFrames(): SpriteFrame[] {

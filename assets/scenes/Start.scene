@@ -2011,7 +2011,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "100",
+    "_string": "300",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 36,
@@ -2143,7 +2143,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "100",
+    "_string": "300",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 36,
@@ -2275,7 +2275,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "100",
+    "_string": "300",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 36,
@@ -2459,7 +2459,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "购买 100",
+    "_string": "购买 300",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 38,
@@ -2704,7 +2704,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "购买 100",
+    "_string": "购买 300",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 38,
@@ -2949,7 +2949,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "购买 100",
+    "_string": "购买 300",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 38,

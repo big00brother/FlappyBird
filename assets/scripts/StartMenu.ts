@@ -173,7 +173,7 @@ export class StartMenu extends Component {
     private readonly coinScoreKey = 'flappy_coin_score';
     private readonly ownedBirdsKey = 'flappy_owned_birds';
     private readonly selectedBirdKey = 'flappy_selected_bird';
-    private readonly birdPrice = 200;
+    private readonly birdPrice = 300;
     private readonly designWidth = 640;
     private readonly designHeight = 1280;
 
