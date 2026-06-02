@@ -189,10 +189,12 @@ export class StartMenu extends Component {
     private pressedPlainNode: Node | null = null;
     private notEnoughToast: Node | null = null;
     private isLoadingGame = false;
+    private loadingResetTimer: ReturnType<typeof setTimeout> | null = null;
 
     private readonly birdFrameInterval = 0.12;
     private readonly birdFloatAmplitude = 18;
     private readonly birdFloatDuration = 1.5;
+    private readonly loadSceneTimeoutMs = 2500;
 
     protected onLoad(): void {
         AudioManager.ensure();
@@ -206,6 +208,10 @@ export class StartMenu extends Component {
     protected update(deltaTime: number): void {
         this.updateContentFit();
         this.updateBird(deltaTime);
+    }
+
+    protected onDestroy(): void {
+        this.clearLoadingResetTimer();
     }
 
     private resolveSceneNodes(): void {
@@ -433,21 +439,46 @@ export class StartMenu extends Component {
     }
 
     private enterGame(): void {
-        if (this.isLoadingGame) {
-            return;
-        }
-
-        this.isLoadingGame = true;
-        director.loadScene('Main');
+        this.loadGameScene('Main');
     }
 
     private enterWoodJump(): void {
+        this.loadGameScene('WoodJump');
+    }
+
+    private loadGameScene(sceneName: string): void {
         if (this.isLoadingGame) {
             return;
         }
 
         this.isLoadingGame = true;
-        director.loadScene('WoodJump');
+        this.clearLoadingResetTimer();
+        this.loadingResetTimer = setTimeout(() => {
+            this.isLoadingGame = false;
+            this.loadingResetTimer = null;
+            console.warn(`loadScene timeout: ${sceneName}`);
+        }, this.loadSceneTimeoutMs);
+
+        const started = director.loadScene(sceneName, (error) => {
+            this.clearLoadingResetTimer();
+            if (error) {
+                this.isLoadingGame = false;
+                console.warn(`loadScene failed: ${sceneName}`, error);
+            }
+        });
+
+        if (!started) {
+            this.clearLoadingResetTimer();
+            this.isLoadingGame = false;
+            console.warn(`loadScene not found or already loading: ${sceneName}`);
+        }
+    }
+
+    private clearLoadingResetTimer(): void {
+        if (this.loadingResetTimer !== null) {
+            clearTimeout(this.loadingResetTimer);
+            this.loadingResetTimer = null;
+        }
     }
 
     private openShop(): void {
