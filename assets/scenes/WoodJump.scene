@@ -367,6 +367,44 @@
         "__expectedType__": "cc.SpriteFrame"
       }
     ],
+    "coinFrames": [
+      {
+        "__uuid__": "09190076-2f88-4900-bfa2-387dce8f869a@f9941",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "294a22ce-bc25-488c-b0cd-6bb33f4b955e@f9941",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "1d4692e1-b79c-48fd-9e69-05f0ca09595e@f9941",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "ddfaa469-6561-4014-ae31-94691ea22427@f9941",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "00073b61-3172-4596-a3af-7441f2b99275@f9941",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "2982e8c7-4794-44d6-b672-753ddf1f78a7@f9941",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "327db5c9-3cd5-4ede-bbf3-ed5bffa8e52f@f9941",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "2381060b-27e8-4702-9bc9-303b61e30076@f9941",
+        "__expectedType__": "cc.SpriteFrame"
+      },
+      {
+        "__uuid__": "a3025105-3736-4ade-bdc0-faf8c0bdc438@f9941",
+        "__expectedType__": "cc.SpriteFrame"
+      }
+    ],
     "_id": "WoodJumpManager_component"
   },
   {

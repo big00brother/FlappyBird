@@ -29,6 +29,7 @@ interface WoodRow {
     root: Node;
     left: Node;
     right: Node;
+    coins: Node[];
     scored: boolean;
     leftBreaking: boolean;
     rightBreaking: boolean;
@@ -71,6 +72,11 @@ export class WoodJumpManager extends Component {
     @property([SpriteFrame])
     public purpleBirdFrames: SpriteFrame[] = [];
 
+    @property([SpriteFrame])
+    public coinFrames: SpriteFrame[] = [];
+
+    private readonly bestScoreKey = 'woodjump_best_score';
+    private readonly coinScoreKey = 'flappy_coin_score';
     private readonly ownedBirdsKey = 'flappy_owned_birds';
     private readonly selectedBirdKey = 'flappy_selected_bird';
 
@@ -82,6 +88,8 @@ export class WoodJumpManager extends Component {
     private hudLayer: Node | null = null;
     private hpTextLabel: Label | null = null;
     private scoreLabel: Label | null = null;
+    private bestLabel: Label | null = null;
+    private coinScoreLabel: Label | null = null;
     private gameOverPanel: Node | null = null;
     private restartButton: Node | null = null;
     private menuButton: Node | null = null;
@@ -96,6 +104,8 @@ export class WoodJumpManager extends Component {
     private screenWidth = 0;
     private screenHeight = 0;
     private score = 0;
+    private bestScore = 0;
+    private coinScore = 0;
     private lives = 3;
     private birdVelocityX = 0;
     private birdVelocityY = 0;
@@ -103,6 +113,7 @@ export class WoodJumpManager extends Component {
     private birdFrameIndex = 0;
     private invincibleTimer = 0;
     private hitSoundTimer = 0;
+    private coinAnimTimer = 0;
     private nextRowY = 0;
     private lastJumpDirection: -1 | 1 = 1;
 
@@ -125,18 +136,26 @@ export class WoodJumpManager extends Component {
     private capWidth = 160;
     private capVisibleWidth = 80;
     private capJoinOverlap = 4;
-    private gapBirdWidthMin = 3;
-    private gapBirdWidthMax = 3.4;
+    private gapBirdWidthMin = 2.5;
+    private gapBirdWidthMax = 3.5;
     private gapCenterRange = 70;
     private invincibleDuration = 1;
     private breakSpeed = 900;
     private hitSoundCooldown = 0.08;
     private hitSoundVolume = 0.85;
     private jumpSoundVolume = 0.55;
+    private coinSize = 64;
+    private coinGapRatio = 0.2;
+    private coinCountMin = 3;
+    private coinCountMax = 4;
+    private coinFrameWidth = 64;
+    private coinFrameHeight = 64;
+    private coinAnimDuration = 0.5;
     private birdFrameInterval = 0.12;
 
     protected onLoad(): void {
         this.refreshScreenSize();
+        this.loadSavedScores();
         AudioManager.ensure();
         this.audioSource = getOrAddComponent(this.node, AudioSource);
         this.loadEffectSounds();
@@ -164,6 +183,7 @@ export class WoodJumpManager extends Component {
         this.moveBird(deltaTime);
         this.applyVerticalScroll(deltaTime);
         this.updateRows(deltaTime);
+        this.updateCoinAnimation(deltaTime);
         this.checkCollisions();
         this.scorePassedRows();
         this.spawnRowsUntilTop();
@@ -195,6 +215,8 @@ export class WoodJumpManager extends Component {
 
         this.createHpHud();
         this.scoreLabel = this.createLabel('WoodJumpScoreLabel', '0', 64, new Vec3(0, 0, 0), this.hudLayer);
+        this.bestLabel = this.createLabel('WoodJumpBestLabel', `Best ${this.bestScore}`, 34, new Vec3(0, 0, 0), this.hudLayer);
+        this.coinScoreLabel = this.createLabel('WoodJumpCoinScoreLabel', `Coin ${this.coinScore}`, 34, new Vec3(0, 0, 0), this.hudLayer);
         this.createGameOverPanel();
         this.layoutScene();
         this.resetGame();
@@ -246,6 +268,7 @@ export class WoodJumpManager extends Component {
         this.birdVelocityY = 0;
         this.lastJumpDirection = 1;
         this.invincibleTimer = 0;
+        this.coinAnimTimer = 0;
         this.nextRowY = 0;
 
         for (const row of this.rows) {
@@ -378,11 +401,13 @@ export class WoodJumpManager extends Component {
 
         const left = this.createWoodBar('LeftWoodBar', root, -outside, gapLeftX, 'left');
         const right = this.createWoodBar('RightWoodBar', root, gapRightX, outside, 'right');
+        const coins = this.createCoins(root, gapCenterX, gapWidth);
 
         this.rows.push({
             root,
             left,
             right,
+            coins,
             scored: false,
             leftBreaking: false,
             rightBreaking: false,
@@ -425,6 +450,62 @@ export class WoodJumpManager extends Component {
         return bar;
     }
 
+    private createCoins(parent: Node, gapCenterX: number, gapWidth: number): Node[] {
+        const initialFrame = this.coinFrames[0];
+        if (!initialFrame || this.coinSize <= 0) {
+            return [];
+        }
+
+        const coinSpacing = this.coinSize * this.coinGapRatio;
+        const defaultStep = this.coinSize + coinSpacing;
+        const sidePadding = this.coinSize * 0.05;
+        let coinCount = this.coinCountMin + Math.floor(Math.random() * (this.coinCountMax - this.coinCountMin + 1));
+        const preferredWidth = coinCount * this.coinSize + Math.max(0, coinCount - 1) * coinSpacing + sidePadding * 2;
+        if (coinCount > this.coinCountMin && preferredWidth > gapWidth) {
+            coinCount = this.coinCountMin;
+        }
+        const centerSpanLimit = Math.max(0, gapWidth - this.coinSize - sidePadding * 2);
+        const step = Math.min(defaultStep, coinCount > 1 ? centerSpanLimit / (coinCount - 1) : 0);
+        const totalWidth = step * Math.max(0, coinCount - 1);
+        const firstX = gapCenterX - totalWidth / 2;
+        const coins: Node[] = [];
+
+        for (let i = 0; i < coinCount; i++) {
+            const coin = this.createSpriteNode(`WoodJumpCoin_${i}`, initialFrame, parent, this.coinFrameWidth, this.coinFrameHeight);
+            coin.setScale(1, 1, 1);
+            coin.setPosition(firstX + i * step, 0, 0);
+            coins.push(coin);
+        }
+
+        return coins;
+    }
+
+    private updateCoinAnimation(deltaTime: number): void {
+        if (this.coinFrames.length === 0 || this.coinAnimDuration <= 0) {
+            return;
+        }
+
+        this.coinAnimTimer = (this.coinAnimTimer + deltaTime) % this.coinAnimDuration;
+        const frameIndex = Math.floor((this.coinAnimTimer / this.coinAnimDuration) * this.coinFrames.length) % this.coinFrames.length;
+        const frame = this.coinFrames[frameIndex];
+        if (!frame) {
+            return;
+        }
+
+        for (const row of this.rows) {
+            for (const coin of row.coins) {
+                if (!coin.active) {
+                    continue;
+                }
+
+                const sprite = coin.getComponent(Sprite);
+                if (sprite) {
+                    sprite.spriteFrame = frame;
+                }
+            }
+        }
+    }
+
     private updateRows(deltaTime: number): void {
         const leftGoneX = -this.screenWidth / 2 - this.bodyWidth * 2;
         const rightGoneX = this.screenWidth / 2 + this.bodyWidth * 2;
@@ -460,6 +541,7 @@ export class WoodJumpManager extends Component {
         }
 
         const birdRect = getNodeRect(this.bird, 0.72);
+        this.collectTouchedCoins(birdRect);
 
         if (birdRect.bottom < this.node.worldPosition.y - this.screenHeight / 2 - this.birdHeight * 0.25) {
             this.handleBottomFall();
@@ -490,6 +572,28 @@ export class WoodJumpManager extends Component {
             this.birdVelocityY = Math.max(this.birdVelocityY, this.jumpVelocity * 0.45);
             return;
         }
+    }
+
+    private collectTouchedCoins(birdRect: Rect): void {
+        let collected = 0;
+        for (const row of this.rows) {
+            for (const coin of row.coins) {
+                if (!coin.active || !rectsIntersect(birdRect, getNodeRect(coin, 0.82))) {
+                    continue;
+                }
+
+                coin.active = false;
+                collected += 1;
+            }
+        }
+
+        if (collected <= 0) {
+            return;
+        }
+
+        this.coinScore += collected;
+        sys.localStorage.setItem(this.coinScoreKey, String(this.coinScore));
+        this.updateHud();
     }
 
     private handleBottomFall(): void {
@@ -548,12 +652,22 @@ export class WoodJumpManager extends Component {
         this.state = 'gameOver';
         this.invincibleTimer = 0;
         this.setBirdAlpha(255);
+        if (this.score > this.bestScore) {
+            this.bestScore = this.score;
+            sys.localStorage.setItem(this.bestScoreKey, String(this.bestScore));
+        }
         this.showGameOverPanel();
     }
 
     private updateHud(): void {
         if (this.scoreLabel) {
             this.scoreLabel.string = `${this.score}`;
+        }
+        if (this.bestLabel) {
+            this.bestLabel.string = `Best ${this.bestScore}`;
+        }
+        if (this.coinScoreLabel) {
+            this.coinScoreLabel.string = `Coin ${this.coinScore}`;
         }
         if (this.hpTextLabel) {
             this.hpTextLabel.string = `HP: ${this.lives}`;
@@ -600,6 +714,11 @@ export class WoodJumpManager extends Component {
 
         const blink = Math.sin((this.invincibleDuration - this.invincibleTimer) * Math.PI * 10);
         this.setBirdAlpha(blink > 0 ? 105 : 235);
+    }
+
+    private loadSavedScores(): void {
+        this.bestScore = Number.parseInt(sys.localStorage.getItem(this.bestScoreKey) || '0', 10) || 0;
+        this.coinScore = Number.parseInt(sys.localStorage.getItem(this.coinScoreKey) || '0', 10) || 0;
     }
 
     private refreshScreenSize(): void {
@@ -649,6 +768,12 @@ export class WoodJumpManager extends Component {
         }
         if (this.scoreLabel) {
             this.scoreLabel.node.setPosition(0, this.screenHeight / 2 - 70, 0);
+        }
+        if (this.bestLabel) {
+            this.bestLabel.node.setPosition(0, topY - 74, 0);
+        }
+        if (this.coinScoreLabel) {
+            this.coinScoreLabel.node.setPosition(this.screenWidth / 2 - 112, topY - 16, 0);
         }
     }
 
