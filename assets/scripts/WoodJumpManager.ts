@@ -140,7 +140,7 @@ export class WoodJumpManager extends Component {
     private bodyWidth = 128;
     private capWidth = 160;
     private capVisibleWidth = 80;
-    private capJoinOverlap = 4;
+    private capJoinOverlap = 0;
     private gapBirdWidthMin = 2.5;
     private gapBirdWidthMax = 3.5;
     private gapCenterRange = 70;
