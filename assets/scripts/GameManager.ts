@@ -20,6 +20,8 @@ import {
 import { AudioManager, AudioSettings } from './AudioManager';
 
 const { ccclass, property } = _decorator;
+const BACKGROUND_WIDTH = 640;
+const BACKGROUND_HEIGHT = 1480;
 
 type GameState = 'ready' | 'playing' | 'gameOver';
 
@@ -225,8 +227,8 @@ export class GameManager extends Component {
     }
 
     private createBackground(): void {
-        const bg = this.createSpriteNode('Background', this.bgFrame, this.world, 288, 512);
-        const scale = Math.max(this.screenWidth / 288, this.screenHeight / 512);
+        const bg = this.createSpriteNode('Background', this.bgFrame, this.world, BACKGROUND_WIDTH, BACKGROUND_HEIGHT);
+        const scale = Math.max(this.screenWidth / BACKGROUND_WIDTH, this.screenHeight / BACKGROUND_HEIGHT);
         bg.setScale(scale, scale, 1);
     }
 
@@ -1003,7 +1005,7 @@ export class GameManager extends Component {
 
         const bg = this.world?.getChildByName('Background');
         if (bg) {
-            const scale = Math.max(this.screenWidth / 288, this.screenHeight / 512);
+            const scale = Math.max(this.screenWidth / BACKGROUND_WIDTH, this.screenHeight / BACKGROUND_HEIGHT);
             bg.setScale(scale, scale, 1);
         }
 

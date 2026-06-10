@@ -22,6 +22,8 @@ import {
 import { AudioManager, AudioSettings } from './AudioManager';
 
 const { ccclass, property } = _decorator;
+const BACKGROUND_WIDTH = 640;
+const BACKGROUND_HEIGHT = 1480;
 
 type WoodJumpState = 'ready' | 'playing' | 'gameOver';
 
@@ -196,7 +198,7 @@ export class WoodJumpManager extends Component {
     private createScene(): void {
         this.activeBirdFrames = this.getSelectedBirdFrames();
 
-        this.background = this.createSpriteNode('WoodJumpBackground', this.bgFrame, this.node, 288, 512);
+        this.background = this.createSpriteNode('WoodJumpBackground', this.bgFrame, this.node, BACKGROUND_WIDTH, BACKGROUND_HEIGHT);
         this.background.setSiblingIndex(0);
 
         this.world = getOrCreateChild(this.node, 'WoodJumpWorld');
@@ -770,7 +772,7 @@ export class WoodJumpManager extends Component {
             canvasTransform.setContentSize(this.screenWidth, this.screenHeight);
         }
         if (this.background) {
-            const bgScale = Math.max(this.screenWidth / 288, this.screenHeight / 512);
+            const bgScale = Math.max(this.screenWidth / BACKGROUND_WIDTH, this.screenHeight / BACKGROUND_HEIGHT);
             this.background.setScale(bgScale, bgScale, 1);
             this.background.setPosition(0, 0, 0);
         }

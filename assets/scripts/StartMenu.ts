@@ -18,6 +18,8 @@ import {
 import { AudioManager, AudioSettings } from './AudioManager';
 
 const { ccclass, property } = _decorator;
+const BACKGROUND_WIDTH = 640;
+const BACKGROUND_HEIGHT = 1480;
 
 type BirdSkinId = 'default' | 'red' | 'blue' | 'purple';
 
@@ -752,7 +754,7 @@ export class StartMenu extends Component {
     private updateContentFit(): void {
         const visibleSize = view.getVisibleSize();
         if (this.background) {
-            const backgroundScale = Math.max(visibleSize.width / 288, visibleSize.height / 512);
+            const backgroundScale = Math.max(visibleSize.width / BACKGROUND_WIDTH, visibleSize.height / BACKGROUND_HEIGHT);
             this.background.setScale(backgroundScale, backgroundScale, 1);
             this.background.setPosition(0, 0, 0);
         }

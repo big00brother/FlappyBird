@@ -39,17 +39,17 @@
       "id": "f9941",
       "name": "spriteFrame",
       "userData": {
-        "trimType": "auto",
+        "trimType": "none",
         "trimThreshold": 1,
         "rotated": false,
         "offsetX": 0,
         "offsetY": 0,
         "trimX": 0,
         "trimY": 0,
-        "width": 288,
-        "height": 512,
-        "rawWidth": 288,
-        "rawHeight": 512,
+        "width": 640,
+        "height": 1480,
+        "rawWidth": 640,
+        "rawHeight": 1480,
         "borderTop": 0,
         "borderBottom": 0,
         "borderLeft": 0,
@@ -61,17 +61,17 @@
         "meshType": 0,
         "vertices": {
           "rawPosition": [
-            -144,
-            -256,
+            -320.0,
+            -740.0,
             0,
-            144,
-            -256,
+            320.0,
+            -740.0,
             0,
-            -144,
-            256,
+            -320.0,
+            740.0,
             0,
-            144,
-            256,
+            320.0,
+            740.0,
             0
           ],
           "indexes": [
@@ -84,12 +84,12 @@
           ],
           "uv": [
             0,
-            512,
-            288,
-            512,
+            1480,
+            640,
+            1480,
             0,
             0,
-            288,
+            640,
             0
           ],
           "nuv": [
@@ -103,13 +103,13 @@
             1
           ],
           "minPos": [
-            -144,
-            -256,
+            -320.0,
+            -740.0,
             0
           ],
           "maxPos": [
-            144,
-            256,
+            320.0,
+            740.0,
             0
           ]
         },
@@ -128,7 +128,7 @@
   "userData": {
     "type": "sprite-frame",
     "fixAlphaTransparencyArtifacts": true,
-    "hasAlpha": true,
+    "hasAlpha": false,
     "redirect": "f994ddfe-b760-43f2-b891-86f1c0116c13@6c48a"
   }
 }
