@@ -46,9 +46,6 @@ export class GameManager extends Component {
     public landFrame: SpriteFrame | null = null;
 
     @property(SpriteFrame)
-    public landFillFrame: SpriteFrame | null = null;
-
-    @property(SpriteFrame)
     public pipeUpFrame: SpriteFrame | null = null;
 
     @property(SpriteFrame)
@@ -56,6 +53,9 @@ export class GameManager extends Component {
 
     @property(SpriteFrame)
     public pipeBodyFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
+    public pipeCapFrame: SpriteFrame | null = null;
 
     @property(SpriteFrame)
     public hpFrame: SpriteFrame | null = null;
@@ -112,7 +112,6 @@ export class GameManager extends Component {
     private jumpClip: AudioClip | null = null;
     private coinClip: AudioClip | null = null;
     private lands: Node[] = [];
-    private landFills: Node[] = [];
     private hpNodes: Node[] = [];
     private pipes: PipePair[] = [];
     private activeBirdFrames: SpriteFrame[] = [];
@@ -137,7 +136,7 @@ export class GameManager extends Component {
     private landScale = 2;
     private pipeScale = 2;
     private landHeight = 224;
-    private landFillHeight = 320;
+    private landVisualHeight = 544;
     private landWidth = 672;
     private floorY = -336;
     private birdHeight = 86.4;
@@ -234,28 +233,17 @@ export class GameManager extends Component {
 
     private createLand(): void {
         this.landHeight = 112 * this.landScale;
-        this.landFillHeight = 160 * this.landScale;
+        this.landVisualHeight = 272 * this.landScale;
         this.landWidth = 336 * this.landScale;
         this.floorY = -this.screenHeight / 2 + this.landHeight + this.landOffsetY;
 
         for (let i = 0; i < 2; i++) {
             const x = i * this.landWidth;
-            if (this.landFillFrame) {
-                const fill = this.createSpriteNode(`LandFill_${i}`, this.landFillFrame, this.world, 336, 160);
-                fill.setScale(this.landScale, this.landScale, 1);
-                fill.setPosition(x, this.getLandFillY(), 0);
-                this.landFills.push(fill);
-            }
-
-            const land = this.createSpriteNode(`Land_${i}`, this.landFrame, this.world, 336, 112);
+            const land = this.createSpriteNode(`Land_${i}`, this.landFrame, this.world, 336, 272);
             land.setScale(this.landScale, this.landScale, 1);
-            land.setPosition(x, this.floorY - this.landHeight / 2);
+            land.setPosition(x, this.floorY - this.landVisualHeight / 2);
             this.lands.push(land);
         }
-    }
-
-    private getLandFillY(): number {
-        return this.floorY - this.landHeight - this.landFillHeight / 2 + 2;
     }
 
     private createBird(): void {
@@ -660,11 +648,6 @@ export class GameManager extends Component {
             }
 
             land.setPosition(nextX, land.position.y, 0);
-
-            const fill = this.landFills[i];
-            if (fill) {
-                fill.setPosition(nextX, this.getLandFillY(), 0);
-            }
         }
     }
 
@@ -788,19 +771,48 @@ export class GameManager extends Component {
         obstacle.setPosition(0, centerY, 0);
         getOrAddComponent(obstacle, UITransform).setContentSize(this.pipeWidth, height);
 
-        const cap = this.createSpriteNode(`${name}Cap`, capFrame, obstacle, 52, 320);
-        cap.setScale(this.pipeScale, this.pipeScale, 1);
-        cap.setPosition(0, direction > 0 ? -height / 2 + this.pipeHeight / 2 : height / 2 - this.pipeHeight / 2, 0);
+        if (!this.pipeCapFrame) {
+            const cap = this.createSpriteNode(`${name}Cap`, capFrame, obstacle, 52, 320);
+            cap.setScale(this.pipeScale, this.pipeScale, 1);
+            cap.setPosition(0, direction > 0 ? -height / 2 + this.pipeHeight / 2 : height / 2 - this.pipeHeight / 2, 0);
+
+            if (!this.pipeBodyFrame) {
+                return obstacle;
+            }
+
+            const bodyHeight = 64 * this.pipeScale;
+            const capVisibleHeight = 86;
+            let bodyY = direction > 0
+                ? -height / 2 + capVisibleHeight + bodyHeight / 2
+                : height / 2 - capVisibleHeight - bodyHeight / 2;
+            const limitY = direction > 0 ? height / 2 + bodyHeight / 2 : -height / 2 - bodyHeight / 2;
+            let bodyIndex = 0;
+
+            while (direction > 0 ? bodyY < limitY : bodyY > limitY) {
+                const body = this.createSpriteNode(`${name}Body_${bodyIndex}`, this.pipeBodyFrame, obstacle, 52, 64);
+                body.setScale(this.pipeScale, this.pipeScale, 1);
+                body.setPosition(0, bodyY, 0);
+                bodyY += direction * bodyHeight;
+                bodyIndex += 1;
+            }
+
+            return obstacle;
+        }
 
         if (!this.pipeBodyFrame) {
+            const cap = this.createSpriteNode(`${name}Cap`, this.pipeCapFrame, obstacle, 64, 88);
+            cap.setScale(this.pipeScale, direction > 0 ? -this.pipeScale : this.pipeScale, 1);
+            const capHeight = 88 * this.pipeScale;
+            cap.setPosition(0, direction > 0 ? -height / 2 + capHeight / 2 : height / 2 - capHeight / 2, 0);
             return obstacle;
         }
 
         const bodyHeight = 64 * this.pipeScale;
-        const capVisibleHeight = 86;
+        const capVisibleHeight = 44 * this.pipeScale;
+        const capJoinOverlap = 10;
         let bodyY = direction > 0
-            ? -height / 2 + capVisibleHeight + bodyHeight / 2
-            : height / 2 - capVisibleHeight - bodyHeight / 2;
+            ? -height / 2 + capVisibleHeight - capJoinOverlap + bodyHeight / 2
+            : height / 2 - capVisibleHeight + capJoinOverlap - bodyHeight / 2;
         const limitY = direction > 0 ? height / 2 + bodyHeight / 2 : -height / 2 - bodyHeight / 2;
         let bodyIndex = 0;
 
@@ -811,6 +823,11 @@ export class GameManager extends Component {
             bodyY += direction * bodyHeight;
             bodyIndex += 1;
         }
+
+        const cap = this.createSpriteNode(`${name}Cap`, this.pipeCapFrame, obstacle, 64, 88);
+        cap.setScale(this.pipeScale, direction > 0 ? -this.pipeScale : this.pipeScale, 1);
+        const capHeight = 88 * this.pipeScale;
+        cap.setPosition(0, direction > 0 ? -height / 2 + capHeight / 2 : height / 2 - capHeight / 2, 0);
 
         return obstacle;
     }
@@ -1010,11 +1027,7 @@ export class GameManager extends Component {
         }
 
         for (const land of this.lands) {
-            land.setPosition(land.position.x, this.floorY - this.landHeight / 2, 0);
-        }
-        for (let i = 0; i < this.landFills.length; i++) {
-            const land = this.lands[i];
-            this.landFills[i].setPosition(land ? land.position.x : this.landFills[i].position.x, this.getLandFillY(), 0);
+            land.setPosition(land.position.x, this.floorY - this.landVisualHeight / 2, 0);
         }
     }
 

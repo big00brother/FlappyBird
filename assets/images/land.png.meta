@@ -39,7 +39,7 @@
       "id": "f9941",
       "name": "spriteFrame",
       "userData": {
-        "trimType": "auto",
+        "trimType": "rect",
         "trimThreshold": 1,
         "rotated": false,
         "offsetX": 0,
@@ -47,9 +47,9 @@
         "trimX": 0,
         "trimY": 0,
         "width": 336,
-        "height": 112,
+        "height": 272,
         "rawWidth": 336,
-        "rawHeight": 112,
+        "rawHeight": 272,
         "borderTop": 0,
         "borderBottom": 0,
         "borderLeft": 0,
@@ -62,16 +62,16 @@
         "vertices": {
           "rawPosition": [
             -168,
-            -56,
+            -136,
             0,
             168,
-            -56,
+            -136,
             0,
             -168,
-            56,
+            136,
             0,
             168,
-            56,
+            136,
             0
           ],
           "indexes": [
@@ -84,9 +84,9 @@
           ],
           "uv": [
             0,
-            112,
+            272,
             336,
-            112,
+            272,
             0,
             0,
             336,
@@ -104,12 +104,12 @@
           ],
           "minPos": [
             -168,
-            -56,
+            -136,
             0
           ],
           "maxPos": [
             168,
-            56,
+            136,
             0
           ]
         },
