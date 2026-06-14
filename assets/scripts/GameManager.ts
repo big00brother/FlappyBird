@@ -274,8 +274,8 @@ export class GameManager extends Component {
         getOrAddComponent(this.hudLayer, UITransform).setContentSize(this.screenWidth, this.screenHeight);
 
         this.scoreLabel = this.createLabel('ScoreLabel', '0', 72, new Vec3(0, 0, 0), this.hudLayer);
-        this.bestLabel = this.createLabel('BestLabel', `Best ${this.bestScore}`, 34, new Vec3(0, 0, 0), this.hudLayer);
-        this.coinScoreLabel = this.createLabel('CoinScoreLabel', 'Coin 0', 34, new Vec3(0, 0, 0), this.hudLayer);
+        this.bestLabel = this.createLabel('BestLabel', `最高得分 ${this.bestScore}`, 34, new Vec3(0, 0, 0), this.hudLayer);
+        this.coinScoreLabel = this.createLabel('CoinScoreLabel', '金币 0', 34, new Vec3(0, 0, 0), this.hudLayer);
         this.tipLabel = this.createLabel('TipLabel', '', 42, new Vec3(0, 0, 0), this.hudLayer);
         this.createHpHud();
         this.createGameOverPanel();
@@ -1044,10 +1044,10 @@ export class GameManager extends Component {
             this.scoreLabel.string = `${this.score}`;
         }
         if (this.bestLabel) {
-            this.bestLabel.string = `Best ${this.bestScore}`;
+            this.bestLabel.string = `最高得分 ${this.bestScore}`;
         }
         if (this.coinScoreLabel) {
-            this.coinScoreLabel.string = `Coin ${this.coinScore}`;
+            this.coinScoreLabel.string = `金币 ${this.coinScore}`;
         }
     }
 

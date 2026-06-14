@@ -236,8 +236,8 @@ export class WoodJumpManager extends Component {
 
         this.createHpHud();
         this.scoreLabel = this.createLabel('WoodJumpScoreLabel', '0', 64, new Vec3(0, 0, 0), this.hudLayer);
-        this.bestLabel = this.createLabel('WoodJumpBestLabel', `Best ${this.bestScore}`, 34, new Vec3(0, 0, 0), this.hudLayer);
-        this.coinScoreLabel = this.createLabel('WoodJumpCoinScoreLabel', `Coin ${this.coinScore}`, 34, new Vec3(0, 0, 0), this.hudLayer);
+        this.bestLabel = this.createLabel('WoodJumpBestLabel', `最高得分 ${this.bestScore}`, 34, new Vec3(0, 0, 0), this.hudLayer);
+        this.coinScoreLabel = this.createLabel('WoodJumpCoinScoreLabel', `金币 ${this.coinScore}`, 34, new Vec3(0, 0, 0), this.hudLayer);
         this.createGameOverPanel();
         this.layoutScene();
         this.resetGame();
@@ -808,10 +808,10 @@ export class WoodJumpManager extends Component {
             this.scoreLabel.string = `${this.score}`;
         }
         if (this.bestLabel) {
-            this.bestLabel.string = `Best ${this.bestScore}`;
+            this.bestLabel.string = `最高得分 ${this.bestScore}`;
         }
         if (this.coinScoreLabel) {
-            this.coinScoreLabel.string = `Coin ${this.coinScore}`;
+            this.coinScoreLabel.string = `金币 ${this.coinScore}`;
         }
         if (this.hpTextLabel) {
             this.hpTextLabel.string = `HP: ${this.lives}`;
