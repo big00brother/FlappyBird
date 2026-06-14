@@ -141,8 +141,8 @@ export class WoodJumpManager extends Component {
     private capWidth = 160;
     private capVisibleWidth = 32;
     private capJoinOverlap = 10;
-    private gapBirdWidthMin = 2.5;
-    private gapBirdWidthMax = 3.5;
+    private gapBirdWidthMin = 2.4;
+    private gapBirdWidthMax = 3;
     private gapCenterRange = 70;
     private invincibleDuration = 1;
     private breakSpeed = 900;
@@ -152,7 +152,7 @@ export class WoodJumpManager extends Component {
     private coinSoundVolume = 0.65;
     private coinSize = 64;
     private coinGapRatio = 0.2;
-    private coinCountMin = 3;
+    private coinCountMin = 1;
     private coinCountMax = 4;
     private coinFrameWidth = 64;
     private coinFrameHeight = 64;
@@ -417,7 +417,8 @@ export class WoodJumpManager extends Component {
             return;
         }
 
-        const gapScale = this.gapBirdWidthMin + Math.random() * (this.gapBirdWidthMax - this.gapBirdWidthMin);
+        const gapRange = this.getCurrentGapBirdWidthRange();
+        const gapScale = gapRange.min + Math.random() * (gapRange.max - gapRange.min);
         const gapWidth = this.birdWidth * gapScale;
         const maxGapCenter = Math.max(0, Math.min(this.gapCenterRange, this.screenWidth / 2 - gapWidth / 2 - 40));
         const gapCenterX = (Math.random() * 2 - 1) * maxGapCenter;
@@ -445,6 +446,22 @@ export class WoodJumpManager extends Component {
             leftGone: false,
             rightGone: false,
         });
+    }
+
+    private getCurrentGapBirdWidthRange(): { min: number; max: number } {
+        if (this.score < 10) {
+            return { min: this.gapBirdWidthMin, max: this.gapBirdWidthMax };
+        }
+
+        if (this.score < 20) {
+            return { min: 2.1, max: 2.7 };
+        }
+
+        if (this.score < 30) {
+            return { min: 1.8, max: 2.4 };
+        }
+
+        return { min: 1.8, max: 2.2 };
     }
 
     private createWoodBar(name: string, parent: Node, startX: number, endX: number, side: 'left' | 'right'): Node {
@@ -490,11 +507,7 @@ export class WoodJumpManager extends Component {
         const coinSpacing = this.coinSize * this.coinGapRatio;
         const defaultStep = this.coinSize + coinSpacing;
         const sidePadding = this.coinSize * 0.05;
-        let coinCount = this.coinCountMin + Math.floor(Math.random() * (this.coinCountMax - this.coinCountMin + 1));
-        const preferredWidth = coinCount * this.coinSize + Math.max(0, coinCount - 1) * coinSpacing + sidePadding * 2;
-        if (coinCount > this.coinCountMin && preferredWidth > gapWidth) {
-            coinCount = this.coinCountMin;
-        }
+        const coinCount = this.getCoinCountForGap(gapWidth);
         const centerSpanLimit = Math.max(0, gapWidth - this.coinSize - sidePadding * 2);
         const step = Math.min(defaultStep, coinCount > 1 ? centerSpanLimit / (coinCount - 1) : 0);
         const totalWidth = step * Math.max(0, coinCount - 1);
@@ -509,6 +522,24 @@ export class WoodJumpManager extends Component {
         }
 
         return coins;
+    }
+
+    private getCoinCountForGap(gapWidth: number): number {
+        const gapScale = gapWidth / this.birdWidth;
+
+        if (gapScale >= 2.8) {
+            return 3 + Math.floor(Math.random() * 2);
+        }
+
+        if (gapScale >= 2.4) {
+            return 3;
+        }
+
+        if (gapScale >= 2.1) {
+            return 2 + Math.floor(Math.random() * 2);
+        }
+
+        return this.coinCountMin + Math.floor(Math.random() * 2);
     }
 
     private updateCoinAnimation(deltaTime: number): void {

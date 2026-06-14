@@ -35,6 +35,11 @@ interface PipePair {
     bottomBreaking: boolean;
     topGone: boolean;
     bottomGone: boolean;
+    isMoving: boolean;
+    moveBaseY: number;
+    moveTimer: number;
+    moveAmplitude: number;
+    moveSpeed: number;
 }
 
 @ccclass('GameManager')
@@ -156,6 +161,10 @@ export class GameManager extends Component {
     private maxLives = 3;
     private invincibleDuration = 1;
     private pipeBreakSpeed = 820;
+    private movingPipeAmplitude = 70;
+    private movingPipeMinAmplitude = 20;
+    private movingPipeSpeed = 1.4;
+    private movingPipeTopMargin = 8;
     private groundBounceVelocity = 860;
     private hpIconScale = 0.32;
     private hitSoundCooldown = 0.08;
@@ -662,7 +671,12 @@ export class GameManager extends Component {
 
         for (let i = this.pipes.length - 1; i >= 0; i--) {
             const pair = this.pipes[i];
-            pair.root.setPosition(pair.root.position.x - this.pipeSpeed * deltaTime, 0, 0);
+            let nextRootY = pair.moveBaseY;
+            if (pair.isMoving) {
+                pair.moveTimer += deltaTime;
+                nextRootY = pair.moveBaseY + Math.sin(pair.moveTimer * pair.moveSpeed) * pair.moveAmplitude;
+            }
+            pair.root.setPosition(pair.root.position.x - this.pipeSpeed * deltaTime, nextRootY, 0);
 
             if (pair.topBreaking) {
                 pair.top.setPosition(pair.top.position.x, pair.top.position.y + this.pipeBreakSpeed * deltaTime, 0);
@@ -749,6 +763,7 @@ export class GameManager extends Component {
         const bottom = this.createPipeObstacle('PipeUp', this.pipeUpFrame, root, gapBottomY, screenBottomY, -1);
 
         const coins = this.createCoins(root, gapCenterY, gapHeight);
+        const motion = this.createPipeMotion(gapCenterY, gapHeight);
 
         this.pipes.push({
             root,
@@ -760,7 +775,53 @@ export class GameManager extends Component {
             bottomBreaking: false,
             topGone: false,
             bottomGone: false,
+            isMoving: motion.isMoving,
+            moveBaseY: 0,
+            moveTimer: motion.phase,
+            moveAmplitude: motion.amplitude,
+            moveSpeed: motion.speed,
         });
+    }
+
+    private createPipeMotion(gapCenterY: number, gapHeight: number): { isMoving: boolean; amplitude: number; speed: number; phase: number } {
+        const chance = this.getMovingPipeChance();
+        if (chance <= 0 || Math.random() >= chance) {
+            return { isMoving: false, amplitude: 0, speed: this.movingPipeSpeed, phase: 0 };
+        }
+
+        const gapTopY = gapCenterY + gapHeight / 2;
+        const gapBottomY = gapCenterY - gapHeight / 2;
+        const pipeHeadVisibleHeight = this.getPipeHeadVisibleHeight();
+        const upwardSpace = this.screenHeight / 2 - this.movingPipeTopMargin - (gapTopY + pipeHeadVisibleHeight);
+        const downwardSpace = gapBottomY - pipeHeadVisibleHeight - this.floorY;
+        const amplitude = Math.min(this.movingPipeAmplitude, upwardSpace, downwardSpace);
+        if (amplitude < this.movingPipeMinAmplitude) {
+            return { isMoving: false, amplitude: 0, speed: this.movingPipeSpeed, phase: 0 };
+        }
+
+        return {
+            isMoving: true,
+            amplitude,
+            speed: this.movingPipeSpeed,
+            phase: Math.random() * Math.PI * 2,
+        };
+    }
+
+    private getPipeHeadVisibleHeight(): number {
+        return this.pipeCapFrame ? 44 * this.pipeScale : 86;
+    }
+
+    private getMovingPipeChance(): number {
+        if (this.score < 20) {
+            return 0;
+        }
+        if (this.score < 40) {
+            return 1 / 5;
+        }
+        if (this.score < 50) {
+            return 1 / 4;
+        }
+        return 1 / 3;
     }
 
     private createPipeObstacle(name: string, capFrame: SpriteFrame | null, parent: Node, gapEdgeY: number, endY: number, direction: 1 | -1): Node {
