@@ -32,6 +32,15 @@ interface WoodRow {
     left: Node;
     right: Node;
     coins: Node[];
+    gapCenterX: number;
+    baseGapWidth: number;
+    currentGapWidth: number;
+    isGapMoving: boolean;
+    gapMoveTimer: number;
+    gapMovePhase: number;
+    gapMoveSpeed: number;
+    gapMinWidth: number;
+    gapMaxWidth: number;
     scored: boolean;
     leftBreaking: boolean;
     rightBreaking: boolean;
@@ -144,6 +153,11 @@ export class WoodJumpManager extends Component {
     private gapBirdWidthMin = 2.4;
     private gapBirdWidthMax = 3;
     private gapCenterRange = 70;
+    private movingGapTriggerScore = 20;
+    private movingGapThreshold = 2;
+    private movingGapMinScale = 1.2;
+    private movingGapMaxScale = 2.4;
+    private movingGapSpeed = 1.1;
     private invincibleDuration = 1;
     private breakSpeed = 900;
     private hitSoundCooldown = 0.08;
@@ -188,6 +202,7 @@ export class WoodJumpManager extends Component {
         this.birdVelocityY += this.gravity * deltaTime;
         this.moveBird(deltaTime);
         this.applyVerticalScroll(deltaTime);
+        this.updateMovingGaps(deltaTime);
         this.updateRows(deltaTime);
         this.updateCoinAnimation(deltaTime);
         this.checkCollisions();
@@ -433,13 +448,28 @@ export class WoodJumpManager extends Component {
 
         const left = this.createWoodBar('LeftWoodBar', root, -outside, gapLeftX, 'left');
         const right = this.createWoodBar('RightWoodBar', root, gapRightX, outside, 'right');
-        const coins = this.createCoins(root, gapCenterX, gapWidth);
+        const movingGapMinWidth = this.birdWidth * this.movingGapMinScale;
+        const movingGapMaxWidth = this.birdWidth * this.movingGapMaxScale;
+        const isGapMoving = this.score >= this.movingGapTriggerScore && gapScale < this.movingGapThreshold && movingGapMaxWidth > movingGapMinWidth;
+        const gapMinWidth = isGapMoving ? movingGapMinWidth : gapWidth;
+        const gapMaxWidth = isGapMoving ? movingGapMaxWidth : gapWidth;
+        const gapMovePhase = isGapMoving ? this.getMovingGapPhase(gapWidth, gapMinWidth, gapMaxWidth) : -Math.PI / 2;
+        const coins = this.createCoins(root, gapCenterX, gapWidth, isGapMoving ? 1 : undefined);
 
         this.rows.push({
             root,
             left,
             right,
             coins,
+            gapCenterX,
+            baseGapWidth: gapWidth,
+            currentGapWidth: gapWidth,
+            isGapMoving,
+            gapMoveTimer: 0,
+            gapMovePhase,
+            gapMoveSpeed: this.movingGapSpeed,
+            gapMinWidth,
+            gapMaxWidth,
             scored: false,
             leftBreaking: false,
             rightBreaking: false,
@@ -465,63 +495,94 @@ export class WoodJumpManager extends Component {
     }
 
     private createWoodBar(name: string, parent: Node, startX: number, endX: number, side: 'left' | 'right'): Node {
-        const width = Math.max(12, Math.abs(endX - startX));
-        const centerX = (startX + endX) / 2;
         const bar = new Node(name);
         bar.setParent(parent);
         bar.layer = parent.layer;
+        this.layoutWoodBar(bar, startX, endX, side);
+
+        return bar;
+    }
+
+    private layoutWoodBar(bar: Node, startX: number, endX: number, side: 'left' | 'right'): void {
+        const width = Math.max(12, Math.abs(endX - startX));
+        const centerX = (startX + endX) / 2;
         bar.setPosition(centerX, 0, 0);
         getOrAddComponent(bar, UITransform).setContentSize(width, this.barHeight);
 
         if (!this.woodBodyFrame || !this.woodCapFrame) {
-            return bar;
+            return;
         }
 
         const bodyStartX = side === 'left' ? -width / 2 : -width / 2 + this.capVisibleWidth - this.capJoinOverlap;
         const bodyEndX = side === 'left' ? width / 2 - this.capVisibleWidth + this.capJoinOverlap : width / 2;
         const bodyFillWidth = Math.max(0, bodyEndX - bodyStartX);
         if (bodyFillWidth > 0) {
-            const body = this.createSpriteNode(`${name}Body`, this.woodBodyFrame, bar, bodyFillWidth / this.barScale, 52);
+            const body = this.createSpriteNode(`${bar.name}Body`, this.woodBodyFrame, bar, bodyFillWidth / this.barScale, 52);
             const bodySprite = body.getComponent(Sprite);
             if (bodySprite) {
                 bodySprite.type = Sprite.Type.TILED;
             }
+            body.active = true;
             body.setScale(this.barScale, this.barScale, 1);
             body.setPosition((bodyStartX + bodyEndX) / 2, 0, 0);
+        } else {
+            const body = bar.getChildByName(`${bar.name}Body`);
+            if (body) {
+                body.active = false;
+            }
         }
 
-        const cap = this.createSpriteNode(`${name}Cap`, this.woodCapFrame, bar, 80, 52);
+        const cap = this.createSpriteNode(`${bar.name}Cap`, this.woodCapFrame, bar, 80, 52);
         const capX = side === 'left' ? width / 2 - this.capWidth / 2 : -width / 2 + this.capWidth / 2;
+        cap.active = true;
         cap.setScale(side === 'left' ? this.barScale : -this.barScale, this.barScale, 1);
         cap.setPosition(capX, 0, 0);
-
-        return bar;
     }
 
-    private createCoins(parent: Node, gapCenterX: number, gapWidth: number): Node[] {
+    private getMovingGapPhase(gapWidth: number, minWidth: number, maxWidth: number): number {
+        if (maxWidth <= minWidth) {
+            return -Math.PI / 2;
+        }
+
+        const ratio = Math.max(0, Math.min(1, (gapWidth - minWidth) / (maxWidth - minWidth)));
+        return Math.asin(ratio * 2 - 1);
+    }
+
+    private createCoins(parent: Node, gapCenterX: number, gapWidth: number, forcedCount?: number): Node[] {
         const initialFrame = this.coinFrames[0];
         if (!initialFrame || this.coinSize <= 0) {
             return [];
         }
 
-        const coinSpacing = this.coinSize * this.coinGapRatio;
-        const defaultStep = this.coinSize + coinSpacing;
-        const sidePadding = this.coinSize * 0.05;
-        const coinCount = this.getCoinCountForGap(gapWidth);
-        const centerSpanLimit = Math.max(0, gapWidth - this.coinSize - sidePadding * 2);
-        const step = Math.min(defaultStep, coinCount > 1 ? centerSpanLimit / (coinCount - 1) : 0);
-        const totalWidth = step * Math.max(0, coinCount - 1);
-        const firstX = gapCenterX - totalWidth / 2;
+        const coinCount = forcedCount ?? this.getCoinCountForGap(gapWidth);
         const coins: Node[] = [];
 
         for (let i = 0; i < coinCount; i++) {
             const coin = this.createSpriteNode(`WoodJumpCoin_${i}`, initialFrame, parent, this.coinFrameWidth, this.coinFrameHeight);
             coin.setScale(1, 1, 1);
-            coin.setPosition(firstX + i * step, 0, 0);
             coins.push(coin);
         }
 
+        this.layoutCoins(coins, gapCenterX, gapWidth);
         return coins;
+    }
+
+    private layoutCoins(coins: Node[], gapCenterX: number, gapWidth: number): void {
+        if (coins.length <= 0) {
+            return;
+        }
+
+        const coinSpacing = this.coinSize * this.coinGapRatio;
+        const defaultStep = this.coinSize + coinSpacing;
+        const sidePadding = this.coinSize * 0.05;
+        const centerSpanLimit = Math.max(0, gapWidth - this.coinSize - sidePadding * 2);
+        const step = Math.min(defaultStep, coins.length > 1 ? centerSpanLimit / (coins.length - 1) : 0);
+        const totalWidth = step * Math.max(0, coins.length - 1);
+        const firstX = gapCenterX - totalWidth / 2;
+
+        for (let i = 0; i < coins.length; i++) {
+            coins[i].setPosition(firstX + i * step, 0, 0);
+        }
     }
 
     private getCoinCountForGap(gapWidth: number): number {
@@ -565,6 +626,26 @@ export class WoodJumpManager extends Component {
                     sprite.spriteFrame = frame;
                 }
             }
+        }
+    }
+
+    private updateMovingGaps(deltaTime: number): void {
+        const outside = this.screenWidth / 2 + this.bodyWidth;
+
+        for (const row of this.rows) {
+            if (!row.isGapMoving || row.leftBreaking || row.rightBreaking || row.leftGone || row.rightGone) {
+                continue;
+            }
+
+            row.gapMoveTimer += deltaTime;
+            const wave = (Math.sin(row.gapMoveTimer * row.gapMoveSpeed + row.gapMovePhase) + 1) / 2;
+            row.currentGapWidth = row.gapMinWidth + (row.gapMaxWidth - row.gapMinWidth) * wave;
+
+            const gapLeftX = row.gapCenterX - row.currentGapWidth / 2;
+            const gapRightX = row.gapCenterX + row.currentGapWidth / 2;
+            this.layoutWoodBar(row.left, -outside, gapLeftX, 'left');
+            this.layoutWoodBar(row.right, gapRightX, outside, 'right');
+            this.layoutCoins(row.coins, row.gapCenterX, row.currentGapWidth);
         }
     }
 

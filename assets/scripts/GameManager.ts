@@ -894,11 +894,19 @@ export class GameManager extends Component {
     }
 
     private getCurrentGapRange(): { min: number; max: number } {
-        const difficultyStep = Math.min(3, Math.floor(this.score / 10));
-        return {
-            min: 1.8 - difficultyStep * 0.1,
-            max: 3 - difficultyStep * 0.2,
-        };
+        if (this.score < 10) {
+            return { min: 2.1, max: 3 };
+        }
+
+        if (this.score < 20) {
+            return { min: 2, max: 2.8 };
+        }
+
+        if (this.score < 30) {
+            return { min: 1.9, max: 2.6 };
+        }
+
+        return { min: 1.8, max: 2.4 };
     }
 
     private createCoins(parent: Node, gapCenterY: number, gapHeight: number): Node[] {
